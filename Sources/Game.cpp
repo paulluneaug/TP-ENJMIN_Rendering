@@ -18,7 +18,22 @@ using Microsoft::WRL::ComPtr;
 // Global stuff
 Shader* basicShader;
 
+struct ModelData {
+	Matrix model;
+};
+struct CameraData {
+	Matrix view;
+	Matrix projection;
+};
+
+// a terme a mettre dans une class Camera:
+Matrix view;
+Matrix projection;
+
 ComPtr<ID3D11Buffer> vertexBuffer;
+ComPtr<ID3D11Buffer> indexBuffer;
+ComPtr<ID3D11Buffer> constantBufferModel;
+ComPtr<ID3D11Buffer> constantBufferCamera;
 ComPtr<ID3D11InputLayout> inputLayout;
 
 // Game
@@ -47,6 +62,8 @@ void Game::Initialize(HWND window, int width, int height) {
 	basicShader = new Shader(L"Basic");
 	basicShader->Create(m_deviceResources.get());
 
+	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f);
+
 	auto device = m_deviceResources->GetD3DDevice();
 
 	const std::vector<D3D11_INPUT_ELEMENT_DESC> InputElementDescs = {
@@ -56,8 +73,58 @@ void Game::Initialize(HWND window, int width, int height) {
 		InputElementDescs.data(), InputElementDescs.size(),
 		basicShader->vsBytecode.data(), basicShader->vsBytecode.size(),
 		inputLayout.ReleaseAndGetAddressOf());
+	
+	{
+		std::vector<float> data = {
+			-0.5f,  0.5f,  0.0f, // v0
+			 0.5f, -0.5f,  0.0f, // v1
+			-0.5f, -0.5f,  0.0f, // v2
+			 0.5f,  0.5f,  0.0f, // v3
 
-	// TP: allouer vertexBuffer ici
+		};
+		CD3D11_BUFFER_DESC desc(
+			sizeof(float) * data.size(),
+			D3D11_BIND_VERTEX_BUFFER
+		);
+		D3D11_SUBRESOURCE_DATA dataInitial = {};
+		dataInitial.pSysMem = data.data();
+
+		device->CreateBuffer(
+			&desc,
+			&dataInitial,
+			vertexBuffer.ReleaseAndGetAddressOf()
+		);
+	}
+	{
+		std::vector<uint32_t> data = {
+			0, 1, 2,
+			0, 3, 1
+		};
+		CD3D11_BUFFER_DESC desc(
+			sizeof(uint32_t) * data.size(),
+			D3D11_BIND_INDEX_BUFFER
+		);
+		D3D11_SUBRESOURCE_DATA dataInitial = {};
+		dataInitial.pSysMem = data.data();
+
+		device->CreateBuffer(
+			&desc,
+			&dataInitial,
+			indexBuffer.ReleaseAndGetAddressOf()
+		);
+	}
+	{
+		CD3D11_BUFFER_DESC descModel(sizeof(ModelData), D3D11_BIND_CONSTANT_BUFFER);
+		device->CreateBuffer(
+			&descModel, nullptr,
+			constantBufferModel.ReleaseAndGetAddressOf()
+		);
+		CD3D11_BUFFER_DESC descCamera(sizeof(CameraData), D3D11_BIND_CONSTANT_BUFFER);
+		device->CreateBuffer(
+			&descCamera, nullptr,
+			constantBufferCamera.ReleaseAndGetAddressOf()
+		);
+	}
 }
 
 void Game::Tick() {
@@ -74,6 +141,12 @@ void Game::Update(DX::StepTimer const& timer) {
 	auto const ms = m_mouse->GetState();
 	
 	// add kb/mouse interact here
+	view = Matrix::CreateLookAt(
+		Vector3(0, 0, 2),
+		//Vector3(2 * sin(timer.GetTotalSeconds()), 0, 2 * cos(timer.GetTotalSeconds())),
+		Vector3::Zero,
+		Vector3::Up
+	);
 	
 	if (kb.Escape)
 		ExitGame();
@@ -103,6 +176,24 @@ void Game::Render() {
 	basicShader->Apply(m_deviceResources.get());
 
 	// TP: Tracer votre vertex buffer ici
+	ID3D11Buffer* vbs[] = { vertexBuffer.Get() };
+	const UINT strides[] = { sizeof(float) * 3 };
+	const UINT offsets[] = { 0 };
+	context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
+	context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+	ModelData dataModel = {};
+	dataModel.model = Matrix::CreateTranslation(Vector3(0.5f, 0, 0)).Transpose();
+	CameraData dataCamera = {};
+	dataCamera.view = view.Transpose();
+	dataCamera.projection = projection.Transpose();
+	context->UpdateSubresource(constantBufferModel.Get(), 0, nullptr, &dataModel, 0, 0);
+	context->UpdateSubresource(constantBufferCamera.Get(), 0, nullptr, &dataCamera, 0, 0);
+
+	ID3D11Buffer* cbs[] = { constantBufferModel.Get(), constantBufferCamera.Get() };
+	context->VSSetConstantBuffers(0, 2, cbs);
+
+	context->DrawIndexed(6, 0, 0);
 
 	// envoie nos commandes au GPU pour etre afficher � l'�cran
 	m_deviceResources->Present();
@@ -135,6 +226,8 @@ void Game::OnWindowSizeChanged(int width, int height) {
 
 	// The windows size has changed:
 	// We can realloc here any resources that depends on the target resolution (post processing etc)
+
+	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f);
 }
 
 void Game::OnDeviceLost() {
