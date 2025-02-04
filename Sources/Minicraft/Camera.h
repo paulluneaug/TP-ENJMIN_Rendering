@@ -15,9 +15,6 @@ class Camera {
 	Matrix projection;
 	Matrix view;
 
-	int lastMouseX = 0;
-	int lastMouseY = 0;
-
 	struct MatrixData {
 		Matrix mView;
 		Matrix mProjection;

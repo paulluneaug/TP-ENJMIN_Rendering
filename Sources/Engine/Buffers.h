@@ -5,8 +5,8 @@ using Microsoft::WRL::ComPtr;
 template<typename TVertex>
 class VertexBuffer {
 	ComPtr<ID3D11Buffer> buffer;
-	std::vector<TVertex> data;
 public:
+	std::vector<TVertex> data;
 	VertexBuffer() {};
 
 	uint32_t PushVertex(TVertex v) {
@@ -27,6 +27,10 @@ public:
 			&dataInitial,
 			buffer.ReleaseAndGetAddressOf()
 		);
+	}
+
+	void UpdateBuffer(DeviceResources* deviceRes) {
+		deviceRes->GetD3DDeviceContext()->UpdateSubresource(buffer.Get(), 0, nullptr, &data, 0, 0);
 	}
 
 	void Apply(DeviceResources* deviceRes, int slot = 0) {
