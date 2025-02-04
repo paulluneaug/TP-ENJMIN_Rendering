@@ -32,7 +32,7 @@ struct CameraData {
 Matrix view;
 Matrix projection;
 
-VertexBuffer<VertexLayout_Position> vertexBuffer;
+VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
 IndexBuffer indexBuffer;
 ConstantBuffer<ModelData> constantBufferModel;
 ConstantBuffer<CameraData> constantBufferCamera;
@@ -62,14 +62,14 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	basicShader = new Shader(L"Basic");
 	basicShader->Create(m_deviceResources.get());
-	GenerateInputLayout<VertexLayout_Position>(m_deviceResources.get(), basicShader);
+	GenerateInputLayout<VertexLayout_PositionUV>(m_deviceResources.get(), basicShader);
 
 	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f);
 	
-	vertexBuffer.PushVertex({{-0.5f,  0.5f,  0.0f, 1.0f}});
-	vertexBuffer.PushVertex({{ 0.5f, -0.5f,  0.0f, 1.0f}}); // v1
-	vertexBuffer.PushVertex({{-0.5f, -0.5f,  0.0f, 1.0f}}); // v2
-	vertexBuffer.PushVertex({{ 0.5f,  0.5f,  0.0f, 1.0f}}); // v3
+	vertexBuffer.PushVertex({{-0.5f,  0.5f,  0.0f, 1.0f}, { 0.0f, 1.0f }});
+	vertexBuffer.PushVertex({{ 0.5f, -0.5f,  0.0f, 1.0f}, { 1.0f, 0.0f }}); // v1
+	vertexBuffer.PushVertex({{-0.5f, -0.5f,  0.0f, 1.0f}, { 0.0f, 0.0f }}); // v2
+	vertexBuffer.PushVertex({{ 0.5f,  0.5f,  0.0f, 1.0f}, { 1.0f, 1.0f }}); // v3
 	vertexBuffer.Create(m_deviceResources.get());
 
 	indexBuffer.PushTriangle(0, 1, 2);
@@ -125,7 +125,7 @@ void Game::Render() {
 	
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
-	ApplyInputLayout<VertexLayout_Position>(m_deviceResources.get());
+	ApplyInputLayout<VertexLayout_PositionUV>(m_deviceResources.get());
 
 	basicShader->Apply(m_deviceResources.get());
 
