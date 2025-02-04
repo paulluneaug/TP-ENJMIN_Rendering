@@ -13,6 +13,7 @@
 #include "PerlinNoise.hpp"
 
 #include "Engine/Buffers.h"
+#include <Engine/Chunk.h>
 
 extern void ExitGame() noexcept;
 
@@ -44,6 +45,8 @@ VertexBuffer<VertexLayout> m_vertexBuffer;
 IndexBuffer m_indexBuffer;
 ConstantBuffer<ModelData> m_constantBufferModel;
 ConstantBuffer<CameraData> m_constantBufferCamera;
+
+Chunk m_chunk;
 
 // Game
 Game::Game() noexcept(false) {
@@ -80,6 +83,8 @@ void Game::Initialize(HWND window, int width, int height) {
 	CreateCircle(m_deviceResources->GetD3DDevice(), 0.0f, 0.0f, 0.4f, 12);
 	m_vertexBuffer.Create(m_deviceResources.get());
 	m_indexBuffer.Create(m_deviceResources.get());
+
+	m_chunk.Generate(m_deviceResources.get());
 }
 
 void Game::Tick() {
@@ -105,18 +110,16 @@ void Game::Update(DX::StepTimer const& timer) {
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
 	float cameraSpeed = 1.0f;
-	float cameraRadius = 1.0f;
+	float cameraRadius = 4.0f;
 
 	float seconds = timer.GetTotalSeconds();
 	Vector3 position = Vector3
 	{
 		std::cosf(seconds * cameraSpeed) * cameraRadius,
-		std::sinf(seconds * cameraSpeed) * cameraRadius,
-		2.0f
+		std::cosf(2 * seconds * cameraSpeed) * cameraRadius,
+		std::sinf(seconds * cameraSpeed) * cameraRadius
 	};
 	m_constantBufferCamera.Data.View = Matrix::CreateLookAt(position, Vector3::Zero, Vector3::Up).Transpose();
-
-
 }
 
 // Draws the scene.
@@ -141,18 +144,24 @@ void Game::Render() {
 
 	basicShader->Apply(m_deviceResources.get());
 
-	// Update matrix
-	m_constantBufferModel.UpdateBuffer(m_deviceResources.get());
-	m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
-
-	m_constantBufferModel.ApplyToVS(m_deviceResources.get(), 0);
-	m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
-
 	// TP: Tracer votre vertex buffer ici
 	m_vertexBuffer.Apply(m_deviceResources.get());
 	m_indexBuffer.Apply(m_deviceResources.get());
 
-	context->DrawIndexed(m_indexBuffer.Size(), 0, 0);
+	for (float offset = -0.5f; offset < 0.5f; offset += 0.2f) 
+	{
+		m_constantBufferModel.Data.Model = m_chunk.ModelMatrix.Transpose();
+
+		m_chunk.Draw(m_deviceResources.get());
+
+		// Update matrix
+		m_constantBufferModel.UpdateBuffer(m_deviceResources.get());
+		m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
+
+		m_constantBufferModel.ApplyToVS(m_deviceResources.get(), 0);
+		m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
+	}
+
 
 	// envoie nos commandes au GPU pour etre afficher � l'�cran
 	m_deviceResources->Present();
