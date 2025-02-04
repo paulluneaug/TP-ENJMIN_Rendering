@@ -13,7 +13,7 @@ private :
 public:
 	Matrix ModelMatrix;
 
-	Chunk();
+	Chunk(Vector3 position);
 
 	void Generate(DeviceResources* deviceRes);
 

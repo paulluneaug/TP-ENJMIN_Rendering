@@ -46,7 +46,7 @@ IndexBuffer m_indexBuffer;
 ConstantBuffer<ModelData> m_constantBufferModel;
 ConstantBuffer<CameraData> m_constantBufferCamera;
 
-Chunk m_chunk;
+std::vector<Chunk> m_chunks;
 
 // Game
 Game::Game() noexcept(false) {
@@ -84,7 +84,19 @@ void Game::Initialize(HWND window, int width, int height) {
 	m_vertexBuffer.Create(m_deviceResources.get());
 	m_indexBuffer.Create(m_deviceResources.get());
 
-	m_chunk.Generate(m_deviceResources.get());
+	for (int x = -5; x < 5; ++x)
+	{
+		for (int y = -5; y < 5; ++y)
+		{
+			for (int z = -5; z < 5; ++z)
+			{
+				Chunk& newChunk = m_chunks.emplace_back(Vector3{x * 2.0f, y * 2.0f, z * 2.0f });
+				newChunk.Generate(m_deviceResources.get());
+			}
+		}
+	}
+
+
 }
 
 void Game::Tick() {
@@ -144,22 +156,23 @@ void Game::Render() {
 
 	basicShader->Apply(m_deviceResources.get());
 
+	m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
+	m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
+
 	// TP: Tracer votre vertex buffer ici
 	m_vertexBuffer.Apply(m_deviceResources.get());
 	m_indexBuffer.Apply(m_deviceResources.get());
 
-	for (float offset = -0.5f; offset < 0.5f; offset += 0.2f) 
-	{
-		m_constantBufferModel.Data.Model = m_chunk.ModelMatrix.Transpose();
 
-		m_chunk.Draw(m_deviceResources.get());
+	for (Chunk& chunk : m_chunks) 
+	{
+		m_constantBufferModel.Data.Model = chunk.ModelMatrix.Transpose();
+
+		chunk.Draw(m_deviceResources.get());
 
 		// Update matrix
 		m_constantBufferModel.UpdateBuffer(m_deviceResources.get());
-		m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
-
 		m_constantBufferModel.ApplyToVS(m_deviceResources.get(), 0);
-		m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
 	}
 
 

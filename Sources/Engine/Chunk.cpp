@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "Chunk.h"
 
-Chunk::Chunk()
+Chunk::Chunk(Vector3 position)
 {
-	ModelMatrix = Matrix::Identity;
+	ModelMatrix = Matrix::CreateTranslation(position);
 }
 
 void Chunk::Generate(DeviceResources* deviceRes)
