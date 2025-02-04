@@ -1,3 +1,15 @@
+cbuffer ModelData : register(b0)
+{
+    float4x4 Model;
+}
+
+cbuffer CameraData : register(b1)
+{
+    float4x4 View;
+    float4x4 Projection;
+}
+
+
 struct Input {
 	float4 pos : POSITION0;
 };
@@ -22,5 +34,5 @@ Output main(Input input) {
     output.pos = mul(output.pos, View);
     output.pos = mul(output.pos, Projection);
 
-	return output;
+    return output;
 }

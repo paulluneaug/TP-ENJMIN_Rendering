@@ -36,6 +36,8 @@ private:
 	void Update(DX::StepTimer const& timer);
 	void Render();
 
+	void CreateCircle(ID3D11Device1* device, float cx, float cy, float radius, int resolution);
+
 	// Device resources.
 	std::unique_ptr<DeviceResources>		m_deviceResources;
 

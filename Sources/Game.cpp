@@ -5,6 +5,9 @@
 #include "pch.h"
 #include "Game.h"
 
+#include <iostream>
+
+#include "Engine/Shader.h"
 #include "PerlinNoise.hpp"
 #include "Engine/Shader.h"
 #include "Engine/VertexLayout.h"
@@ -16,25 +19,31 @@ using namespace DirectX::SimpleMath;
 
 using Microsoft::WRL::ComPtr;
 
+struct ModelData
+{
+	Matrix Model;
+};
+
+struct CameraData
+{
+	Matrix View;
+	Matrix Projection;
+};
+
 // Global stuff
 Shader* basicShader;
 
-struct ModelData {
-	Matrix model;
-};
-struct CameraData {
-	Matrix view;
-	Matrix projection;
-};
+int m_verticesCount;
+int m_indicesCount;
 
 // a terme a mettre dans une class Camera:
-Matrix view;
-Matrix projection;
+ModelData m_modelDatas;
+CameraData m_cameraDatas;
 
-ComPtr<ID3D11Buffer> vertexBuffer;
-ComPtr<ID3D11Buffer> indexBuffer;
-ComPtr<ID3D11Buffer> constantBufferModel;
-ComPtr<ID3D11Buffer> constantBufferCamera;
+ComPtr<ID3D11Buffer> m_vertexBuffer;
+ComPtr<ID3D11Buffer> m_indexBuffer;
+ComPtr<ID3D11Buffer> m_constantBufferModel;
+ComPtr<ID3D11Buffer> m_constantBufferCamera;
 
 // Game
 Game::Game() noexcept(false) {
@@ -63,60 +72,24 @@ void Game::Initialize(HWND window, int width, int height) {
 	basicShader->Create(m_deviceResources.get());
 	GenerateInputLayout<VertexLayout_Position>(m_deviceResources.get(), basicShader);
 
-	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f);
+	m_cameraDatas.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
 
 	auto device = m_deviceResources->GetD3DDevice();
-	
-	{
-		std::vector<VertexLayout_Position> data = {
-			{{-0.5f,  0.5f,  0.0f, 1.0f}}, // v0
-			{{ 0.5f, -0.5f,  0.0f, 1.0f}}, // v1
-			{{-0.5f, -0.5f,  0.0f, 1.0f}}, // v2
-			{{ 0.5f,  0.5f,  0.0f, 1.0f}}, // v3
-		};
-		CD3D11_BUFFER_DESC desc(
-			sizeof(VertexLayout_Position) * data.size(),
-			D3D11_BIND_VERTEX_BUFFER
-		);
-		D3D11_SUBRESOURCE_DATA dataInitial = {};
-		dataInitial.pSysMem = data.data();
 
-		device->CreateBuffer(
-			&desc,
-			&dataInitial,
-			vertexBuffer.ReleaseAndGetAddressOf()
-		);
-	}
-	{
-		std::vector<uint32_t> data = {
-			0, 1, 2,
-			0, 3, 1
-		};
-		CD3D11_BUFFER_DESC desc(
-			sizeof(uint32_t) * data.size(),
-			D3D11_BIND_INDEX_BUFFER
-		);
-		D3D11_SUBRESOURCE_DATA dataInitial = {};
-		dataInitial.pSysMem = data.data();
-
-		device->CreateBuffer(
-			&desc,
-			&dataInitial,
-			indexBuffer.ReleaseAndGetAddressOf()
-		);
-	}
 	{
 		CD3D11_BUFFER_DESC descModel(sizeof(ModelData), D3D11_BIND_CONSTANT_BUFFER);
 		device->CreateBuffer(
 			&descModel, nullptr,
-			constantBufferModel.ReleaseAndGetAddressOf()
+			m_constantBufferModel.ReleaseAndGetAddressOf()
 		);
 		CD3D11_BUFFER_DESC descCamera(sizeof(CameraData), D3D11_BIND_CONSTANT_BUFFER);
 		device->CreateBuffer(
 			&descCamera, nullptr,
-			constantBufferCamera.ReleaseAndGetAddressOf()
+			m_constantBufferCamera.ReleaseAndGetAddressOf()
 		);
 	}
+
+	CreateCircle(device, 0.0f, 0.0f, 0.4f, 200);
 }
 
 void Game::Tick() {
@@ -131,19 +104,29 @@ void Game::Tick() {
 void Game::Update(DX::StepTimer const& timer) {
 	auto const kb = m_keyboard->GetState();
 	auto const ms = m_mouse->GetState();
-	
+
 	// add kb/mouse interact here
-	view = Matrix::CreateLookAt(
-		Vector3(0, 0, 2),
-		//Vector3(2 * sin(timer.GetTotalSeconds()), 0, 2 * cos(timer.GetTotalSeconds())),
-		Vector3::Zero,
-		Vector3::Up
-	);
 	
 	if (kb.Escape)
 		ExitGame();
 
 	auto const pad = m_gamePad->GetState(0);
+
+	auto context = m_deviceResources->GetD3DDeviceContext();
+
+	float cameraSpeed = 1.0f;
+	float cameraRadius = 1.0f;
+
+	float seconds = timer.GetTotalSeconds();
+	Vector3 position = Vector3
+	{
+		std::cosf(seconds * cameraSpeed) * cameraRadius,
+		std::sinf(seconds * cameraSpeed) * cameraRadius,
+		2.0f
+	};
+	m_cameraDatas.View = Matrix::CreateLookAt(position, Vector3::Zero, Vector3::Up).Transpose();
+
+
 }
 
 // Draws the scene.
@@ -161,35 +144,91 @@ void Game::Render() {
 	context->ClearDepthStencilView(depthStencil, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	context->RSSetViewports(1, &viewport);
 	context->OMSetRenderTargets(1, &renderTarget, depthStencil);
-	
+
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	
 	ApplyInputLayout<VertexLayout_Position>(m_deviceResources.get());
 
 	basicShader->Apply(m_deviceResources.get());
 
+	// Update matrix
+	context->UpdateSubresource(m_constantBufferModel.Get(), 0, nullptr, &m_modelDatas, 0, 0);
+	context->UpdateSubresource(m_constantBufferCamera.Get(), 0, nullptr, &m_cameraDatas, 0, 0);
+
+	ID3D11Buffer* cbs[] = { m_constantBufferModel.Get(), m_constantBufferCamera.Get() };
+	context->VSSetConstantBuffers(0, 2, cbs);
+
 	// TP: Tracer votre vertex buffer ici
-	ID3D11Buffer* vbs[] = { vertexBuffer.Get() };
+	ID3D11Buffer* vbs[] = { m_vertexBuffer.Get() };
 	const UINT strides[] = { sizeof(VertexLayout_Position) };
 	const UINT offsets[] = { 0 };
 	context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
-	context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 
-	ModelData dataModel = {};
-	dataModel.model = Matrix::CreateTranslation(Vector3(0.5f, 0, 0)).Transpose();
-	CameraData dataCamera = {};
-	dataCamera.view = view.Transpose();
-	dataCamera.projection = projection.Transpose();
-	context->UpdateSubresource(constantBufferModel.Get(), 0, nullptr, &dataModel, 0, 0);
-	context->UpdateSubresource(constantBufferCamera.Get(), 0, nullptr, &dataCamera, 0, 0);
-
-	ID3D11Buffer* cbs[] = { constantBufferModel.Get(), constantBufferCamera.Get() };
-	context->VSSetConstantBuffers(0, 2, cbs);
-
-	context->DrawIndexed(6, 0, 0);
+	context->DrawIndexed(m_indicesCount * 3, 0, 0);
 
 	// envoie nos commandes au GPU pour etre afficher � l'�cran
 	m_deviceResources->Present();
+}
+
+void Game::CreateCircle(ID3D11Device1* device, float cx, float cy, float radius, int resolution)
+{
+	resolution = std::max(3, resolution);
+
+	m_verticesCount = resolution + 1;
+	m_indicesCount = resolution;
+
+	float* vertexData = new float[m_verticesCount * 4];
+	UINT* indexData = new UINT[m_indicesCount * 3];
+
+	float angleStep = XM_2PI / resolution;
+
+	int vertexOffset = 0;
+	int indexOffset = 0;
+
+	printf("AngleStep : %f", angleStep);
+
+	for (int i = 0; i < resolution; ++i)
+	{
+		float angle = angleStep * i;
+		float x = std::cosf(angle) * radius + cx;
+		float y = std::sinf(angle) * radius + cy;
+
+		std::cout << "X : " << x << std::endl;
+
+		vertexData[vertexOffset++] = x;
+		vertexData[vertexOffset++] = y;
+		vertexData[vertexOffset++] = 0.0f;
+		vertexData[vertexOffset++] = 1.0f;
+
+		indexData[indexOffset++] = resolution;
+		indexData[indexOffset++] = (i + 1) % resolution;
+		indexData[indexOffset++] = (i + 0) % resolution;
+	}
+
+	vertexData[vertexOffset++] = cx;
+	vertexData[vertexOffset++] = cy;
+	vertexData[vertexOffset++] = 0.0f;
+	vertexData[vertexOffset++] = 1.0f;
+
+	// Vertex Buffer
+	CD3D11_BUFFER_DESC vertexBufferDescription{ m_verticesCount * UINT(sizeof(float)), D3D11_BIND_VERTEX_BUFFER };
+
+	D3D11_SUBRESOURCE_DATA vertexSubResData = {};
+	vertexSubResData.pSysMem = vertexData;
+
+	device->CreateBuffer(&vertexBufferDescription, &vertexSubResData, m_vertexBuffer.ReleaseAndGetAddressOf());
+
+	// Index Buffer
+	CD3D11_BUFFER_DESC indexBufferDescription{ m_indicesCount * UINT(sizeof(UINT)), D3D11_BIND_INDEX_BUFFER };
+
+	D3D11_SUBRESOURCE_DATA indexSubResData = {};
+	indexSubResData.pSysMem = indexData;
+
+	device->CreateBuffer(&indexBufferDescription, &indexSubResData, m_indexBuffer.ReleaseAndGetAddressOf());
+
+	delete[] vertexData;
+	delete[] indexData;
 }
 
 
@@ -220,7 +259,7 @@ void Game::OnWindowSizeChanged(int width, int height) {
 	// The windows size has changed:
 	// We can realloc here any resources that depends on the target resolution (post processing etc)
 
-	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f);
+	m_cameraDatas.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
 }
 
 void Game::OnDeviceLost() {
