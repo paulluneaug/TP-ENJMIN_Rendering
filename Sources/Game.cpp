@@ -50,7 +50,7 @@ ConstantBuffer<CameraData> m_constantBufferCamera;
 std::vector<Chunk> m_chunks;
 
 
-Texture texture(L"terrain");
+Texture m_texture(L"terrain");
 
 // Game
 Game::Game() noexcept(false) {
@@ -79,7 +79,7 @@ void Game::Initialize(HWND window, int width, int height) {
 	basicShader->Create(m_deviceResources.get());
 	GenerateInputLayout<VertexLayout>(m_deviceResources.get(), basicShader);
 
-	texture.Create(m_deviceResources.get());
+	m_texture.Create(m_deviceResources.get());
 
 	m_constantBufferCamera.Data.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
 
@@ -165,7 +165,7 @@ void Game::Render() {
 	m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
 	m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
 	
-	texture.Apply(m_deviceResources.get());
+	m_texture.Apply(m_deviceResources.get());
 
 	// TP: Tracer votre vertex buffer ici
 	m_vertexBuffer.Apply(m_deviceResources.get());
