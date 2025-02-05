@@ -10,6 +10,7 @@
 #include "Engine/Shader.h"
 #include "Engine/Shader.h"
 #include "Engine/VertexLayout.h"
+#include "Engine/Texture.h"
 #include "PerlinNoise.hpp"
 
 #include "Engine/Buffers.h"
@@ -48,6 +49,9 @@ ConstantBuffer<CameraData> m_constantBufferCamera;
 
 std::vector<Chunk> m_chunks;
 
+
+Texture texture(L"terrain");
+
 // Game
 Game::Game() noexcept(false) {
 	m_deviceResources = std::make_unique<DeviceResources>(DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_D32_FLOAT, 2);
@@ -74,6 +78,8 @@ void Game::Initialize(HWND window, int width, int height) {
 	basicShader = new Shader(L"Basic");
 	basicShader->Create(m_deviceResources.get());
 	GenerateInputLayout<VertexLayout>(m_deviceResources.get(), basicShader);
+
+	texture.Create(m_deviceResources.get());
 
 	m_constantBufferCamera.Data.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
 
@@ -158,6 +164,8 @@ void Game::Render() {
 
 	m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
 	m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
+	
+	texture.Apply(m_deviceResources.get());
 
 	// TP: Tracer votre vertex buffer ici
 	m_vertexBuffer.Apply(m_deviceResources.get());
