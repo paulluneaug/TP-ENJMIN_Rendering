@@ -9,12 +9,13 @@
 
 #include "Engine/Shader.h"
 #include "Engine/Shader.h"
-#include "Engine/VertexLayout.h"
 #include "Engine/Texture.h"
+#include "Engine/VertexLayout.h"
 #include "PerlinNoise.hpp"
 
 #include "Engine/Buffers.h"
 #include <Engine/Chunk.h>
+#include <Minicraft/Camera.h>
 
 extern void ExitGame() noexcept;
 
@@ -45,10 +46,11 @@ int m_indicesCount;
 VertexBuffer<VertexLayout> m_vertexBuffer;
 IndexBuffer m_indexBuffer;
 ConstantBuffer<ModelData> m_constantBufferModel;
-ConstantBuffer<CameraData> m_constantBufferCamera;
+//ConstantBuffer<CameraData> m_constantBufferCamera;
 
 std::vector<Chunk> m_chunks;
 
+Camera m_camera{ 60, 1.0f };
 
 Texture m_texture(L"terrain");
 
@@ -81,10 +83,11 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	m_texture.Create(m_deviceResources.get());
 
-	m_constantBufferCamera.Data.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
+	//m_constantBufferCamera.Data.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
 
 	m_constantBufferModel.Create(m_deviceResources.get());
-	m_constantBufferCamera.Create(m_deviceResources.get());
+
+	//m_constantBufferCamera.Create(m_deviceResources.get());
 
 	CreateCircle(m_deviceResources->GetD3DDevice(), 0.0f, 0.0f, 0.4f, 12);
 	m_vertexBuffer.Create(m_deviceResources.get());
@@ -96,7 +99,7 @@ void Game::Initialize(HWND window, int width, int height) {
 		{
 			for (int z = -5; z < 5; ++z)
 			{
-				Chunk& newChunk = m_chunks.emplace_back(Vector3{x * 2.0f, y * 2.0f, z * 2.0f });
+				Chunk& newChunk = m_chunks.emplace_back(Vector3{ x * 2.0f, y * 2.0f, z * 2.0f });
 				newChunk.Generate(m_deviceResources.get());
 			}
 		}
@@ -114,9 +117,9 @@ void Game::Tick() {
 }
 
 // Updates the world.
-void Game::Update(DX::StepTimer const& timer) {
+void Game::Update(DX::StepTimer const& timer)
+{
 	auto const kb = m_keyboard->GetState();
-	auto const ms = m_mouse->GetState();
 
 	// add kb/mouse interact here
 
@@ -137,7 +140,9 @@ void Game::Update(DX::StepTimer const& timer) {
 		std::cosf(2 * seconds * cameraSpeed) * cameraRadius,
 		std::sinf(seconds * cameraSpeed) * cameraRadius
 	};
-	m_constantBufferCamera.Data.View = Matrix::CreateLookAt(position, Vector3::Zero, Vector3::Up).Transpose();
+
+	m_camera.Update(timer.GetElapsedSeconds(), kb, m_mouse.get());
+	//m_constantBufferCamera.Data.View = Matrix::CreateLookAt(position, Vector3::Zero, Vector3::Up).Transpose();
 }
 
 // Draws the scene.
@@ -162,9 +167,10 @@ void Game::Render() {
 
 	basicShader->Apply(m_deviceResources.get());
 
-	m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
-	m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
-	
+	m_camera.ApplyCamera(m_deviceResources.get());
+	// m_constantBufferCamera.UpdateBuffer(m_deviceResources.get());
+	// m_constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
+
 	m_texture.Apply(m_deviceResources.get());
 
 	// TP: Tracer votre vertex buffer ici
@@ -172,7 +178,7 @@ void Game::Render() {
 	m_indexBuffer.Apply(m_deviceResources.get());
 
 
-	for (Chunk& chunk : m_chunks) 
+	for (Chunk& chunk : m_chunks)
 	{
 		m_constantBufferModel.Data.Model = chunk.ModelMatrix.Transpose();
 
@@ -234,8 +240,7 @@ void Game::OnWindowSizeChanged(int width, int height) {
 
 	// The windows size has changed:
 	// We can realloc here any resources that depends on the target resolution (post processing etc)
-
-	m_constantBufferCamera.Data.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
+	m_camera.UpdateAspectRatio(float(width) / float(height));
 }
 
 void Game::OnDeviceLost() {
