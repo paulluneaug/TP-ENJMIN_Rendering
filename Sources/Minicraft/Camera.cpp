@@ -60,7 +60,8 @@ void Camera::Update(float dt, Keyboard::State kb, Mouse* mouse) {
 		else if (mouseState.leftButton)
 		{
 			// TP Rotate camera a partir de dx/dy
-			m_camRotation *= Quaternion::CreateFromAxisAngle(Vector3::Up, dx * camSpeedRot * dt) * Quaternion::CreateFromAxisAngle(localRight, dy * camSpeedRot * dt);
+			m_camRotation *= Quaternion::CreateFromAxisAngle(localRight, dy * camSpeedRot * dt);
+			m_camRotation *= Quaternion::CreateFromAxisAngle(Vector3::Up, dx * camSpeedRot * dt);
 		}
 		else
 		{
