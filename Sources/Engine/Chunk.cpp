@@ -1,18 +1,20 @@
 #include "pch.h"
 #include "Chunk.h"
 
-Chunk::Chunk(Vector3 position)
+Chunk::Chunk(Vector3Int position)
 {
-	ModelMatrix = Matrix::CreateTranslation(position);
+	ModelMatrix = Matrix::CreateTranslation((position * CHUNK_SIZE).ToVector3());
+
+	for (int i = 0; i < 6; ++i) 
+	{
+		m_neighbouringChunks[i] = nullptr;
+	}
 }
 
 void Chunk::Generate(DeviceResources* deviceRes)
 {
-	FillChunk();
-	GenerateMesh();
-
-	m_vertexBuffer.Create(deviceRes);
-	m_indexBuffer.Create(deviceRes);
+	GenerateBlocksValues();
+	GenerateMesh(deviceRes);
 }
 
 void Chunk::PushCube(const Vector3& position, const BlockData& blockData, byte facesToGenerate)
@@ -65,7 +67,7 @@ inline Vector4 Chunk::ToVec4(Vector3 v3)
 	return Vector4(v3.x, v3.y, v3.z, 1.0f);
 }
 
-void Chunk::FillChunk()
+void Chunk::GenerateBlocksValues()
 {
 	for (int y = 0; y < CHUNK_SIZE; ++y)
 	{
@@ -101,7 +103,7 @@ void Chunk::FillChunk()
 	}
 }
 
-void Chunk::GenerateMesh()
+void Chunk::GenerateMesh(DeviceResources* deviceRes)
 {
 	for (int y = 0; y < CHUNK_SIZE; ++y)
 	{
@@ -118,6 +120,9 @@ void Chunk::GenerateMesh()
 			}
 		}
 	}
+
+	m_vertexBuffer.Create(deviceRes);
+	m_indexBuffer.Create(deviceRes);
 }
 
 inline Vector3Int Chunk::IndexToCoordinates(int index)
@@ -158,18 +163,6 @@ bool Chunk::ShouldDisplayFace(int x, int y, int z, int offsetx, int offsetY, int
 	int newY = y + offsetY;
 	int newZ = z + offsetZ;
 
-	if (newX < 0 || CHUNK_SIZE <= newX)
-	{
-		return true;
-	}
-	if (newY < 0 || CHUNK_SIZE <= newY)
-	{
-		return true;
-	}
-	if (newZ < 0 || CHUNK_SIZE <= newZ)
-	{
-		return true;
-	}
 
 	BlockId currentBlock = GetBlockAtPosition(x, y, z);
 	BlockId otherBlock = GetBlockAtPosition(newX, newY, newZ);
@@ -207,7 +200,7 @@ const BlockId& Chunk::GetBlockAtPosition(int x, int y, int z)
 	}
 	if (CHUNK_SIZE <= y)
 	{
-		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::X_POS];
+		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::Y_POS];
 		return otherChunk != nullptr ? otherChunk->GetBlockAtPosition(x, y - CHUNK_SIZE, z) : EMPTY;
 	}
 

@@ -34,19 +34,19 @@ private :
 
 public:
 
-	Chunk(Vector3 position);
+	Chunk(Vector3Int position);
 
 	void Generate(DeviceResources* deviceRes);
 
 	void Draw(DeviceResources* deviceRes);
 
 	void SetNeighbouringChunk(Chunk* chunk, NeighbouringChunkIndex chunkRelativePosition);
+	void GenerateBlocksValues();
+	void GenerateMesh(DeviceResources* deviceRes);
 
 	inline static Vector4 ToVec4(Vector3 v3);
 
 private:
-	void FillChunk();
-	void GenerateMesh();
 
 	void PushCube(const Vector3& position, const BlockData& blockData, byte facesToDraw);
 	void PushFace(const Vector3& position, const Vector3& up, const Vector3& right, bool draw, int uvID);

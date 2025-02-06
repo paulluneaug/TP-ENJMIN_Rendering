@@ -16,6 +16,7 @@
 #include "Engine/Buffers.h"
 #include <Engine/Chunk.h>
 #include <Minicraft/Camera.h>
+#include <Minicraft/World.h>
 
 extern void ExitGame() noexcept;
 
@@ -26,11 +27,6 @@ using Microsoft::WRL::ComPtr;
 
 using VertexLayout = VertexLayout_PositionUV;
 
-struct ModelData
-{
-	Matrix Model;
-};
-
 struct CameraData
 {
 	Matrix View;
@@ -40,15 +36,9 @@ struct CameraData
 // Global stuff
 Shader* basicShader;
 
-int m_verticesCount;
-int m_indicesCount;
-
-VertexBuffer<VertexLayout> m_vertexBuffer;
-IndexBuffer m_indexBuffer;
-ConstantBuffer<ModelData> m_constantBufferModel;
 //ConstantBuffer<CameraData> m_constantBufferCamera;
 
-std::vector<Chunk> m_chunks;
+World m_world;
 
 Camera m_camera{ 60, 1.0f };
 
@@ -85,25 +75,7 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	m_camera.UpdateAspectRatio(float(width) / float(height));
 
-	m_constantBufferModel.Create(m_deviceResources.get());
-
-	CreateCircle(m_deviceResources->GetD3DDevice(), 0.0f, 0.0f, 0.4f, 12);
-	m_vertexBuffer.Create(m_deviceResources.get());
-	m_indexBuffer.Create(m_deviceResources.get());
-
-	for (int x = -1; x < 2; ++x)
-	{
-		for (int y = -1; y < 2; ++y)
-		{
-			for (int z = -1; z < 2; ++z)
-			{
-				Chunk& newChunk = m_chunks.emplace_back(Vector3{ float(x * Chunk::CHUNK_SIZE), float(y * Chunk::CHUNK_SIZE), float(z * Chunk::CHUNK_SIZE) });
-				newChunk.Generate(m_deviceResources.get());
-			}
-		}
-	}
-
-
+	m_world.Generate(m_deviceResources.get());
 }
 
 void Game::Tick() {
@@ -171,44 +143,11 @@ void Game::Render() {
 
 	m_texture.Apply(m_deviceResources.get());
 
-	// TP: Tracer votre vertex buffer ici
-	m_vertexBuffer.Apply(m_deviceResources.get());
-	m_indexBuffer.Apply(m_deviceResources.get());
-
-
-	for (Chunk& chunk : m_chunks)
-	{
-		m_constantBufferModel.Data.Model = chunk.ModelMatrix.Transpose();
-
-		chunk.Draw(m_deviceResources.get());
-
-		// Update matrix
-		m_constantBufferModel.UpdateBuffer(m_deviceResources.get());
-		m_constantBufferModel.ApplyToVS(m_deviceResources.get(), 0);
-	}
+	m_world.Draw(m_deviceResources.get());
 
 
 	// envoie nos commandes au GPU pour etre afficher � l'�cran
 	m_deviceResources->Present();
-}
-
-void Game::CreateCircle(ID3D11Device1* device, float cx, float cy, float radius, int resolution)
-{
-	resolution = std::max(3, resolution);
-
-	float angleStep = XM_2PI / resolution;
-
-	for (int i = 0; i < resolution; ++i)
-	{
-		float angle = angleStep * i;
-		float x = std::cosf(angle) * radius + cx;
-		float y = std::sinf(angle) * radius + cy;
-
-		m_vertexBuffer.PushVertex({ {x, y, 0.0f, 1.0f}, {x / 2 + 0.5f, y / 2 + 0.5f} });
-		m_indexBuffer.PushTriangle(resolution, (i + 1) % resolution, i);
-	}
-
-	m_vertexBuffer.PushVertex({ {cx, cy, 0.0f, 1.0f}, {0.5f, 0.5f} });
 }
 
 
