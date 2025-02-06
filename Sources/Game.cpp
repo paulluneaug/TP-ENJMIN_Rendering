@@ -83,23 +83,21 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	m_texture.Create(m_deviceResources.get());
 
-	//m_constantBufferCamera.Data.Projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f).Transpose();
+	m_camera.UpdateAspectRatio(float(width) / float(height));
 
 	m_constantBufferModel.Create(m_deviceResources.get());
-
-	//m_constantBufferCamera.Create(m_deviceResources.get());
 
 	CreateCircle(m_deviceResources->GetD3DDevice(), 0.0f, 0.0f, 0.4f, 12);
 	m_vertexBuffer.Create(m_deviceResources.get());
 	m_indexBuffer.Create(m_deviceResources.get());
 
-	for (int x = -5; x < 5; ++x)
+	for (int x = -1; x < 2; ++x)
 	{
-		for (int y = -5; y < 5; ++y)
+		for (int y = -1; y < 2; ++y)
 		{
-			for (int z = -5; z < 5; ++z)
+			for (int z = -1; z < 2; ++z)
 			{
-				Chunk& newChunk = m_chunks.emplace_back(Vector3{ x * 2.0f, y * 2.0f, z * 2.0f });
+				Chunk& newChunk = m_chunks.emplace_back(Vector3{ float(x * Chunk::CHUNK_SIZE), float(y * Chunk::CHUNK_SIZE), float(z * Chunk::CHUNK_SIZE) });
 				newChunk.Generate(m_deviceResources.get());
 			}
 		}
