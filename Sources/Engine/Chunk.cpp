@@ -8,24 +8,40 @@ Chunk::Chunk(Vector3 position)
 
 void Chunk::Generate(DeviceResources* deviceRes)
 {
-	PushFace({ -0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Right);
-	PushFace({ 0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Forward);
-	PushFace({ 0.5f, -0.5f, -0.5f }, Vector3::Up, -Vector3::Right);
-	PushFace({ -0.5f, -0.5f,-0.5f }, Vector3::Up, -Vector3::Forward);
-
-	PushFace({ -0.5f, 0.5f, 0.5f }, Vector3::Forward, Vector3::Right); // Top	
-	PushFace({ 0.5f, -0.5f, 0.5f }, Vector3::Forward, -Vector3::Right); // Bottom
+	FillChunk();
+	GenerateMesh();
 
 	m_vertexBuffer.Create(deviceRes);
 	m_indexBuffer.Create(deviceRes);
 }
 
-void Chunk::PushFace(Vector3 position, Vector3 up, Vector3 right)
+void Chunk::PushCube(const Vector3& position, const BlockData& blockData, byte facesToGenerate)
 {
-	uint32_t a = m_vertexBuffer.PushVertex({ ToVec4(position),				{0.0f, 0.0f} });
-	uint32_t b = m_vertexBuffer.PushVertex({ ToVec4(position + right),		{1.0f, 0.0f} });
-	uint32_t c = m_vertexBuffer.PushVertex({ ToVec4(position + up),			{0.0f, 1.0f} });
-	uint32_t d = m_vertexBuffer.PushVertex({ ToVec4(position + up + right), {1.0f, 1.0f} });
+	PushFace(position + Vector3{ -0.5f, -0.5f, 0.5f },	Vector3::Up, Vector3::Right,		(facesToGenerate & (1 << 0)) != 0, blockData.texIdSide);
+	PushFace(position + Vector3{ 0.5f, -0.5f, 0.5f },	Vector3::Up, Vector3::Forward,		(facesToGenerate & (1 << 1)) != 0, blockData.texIdSide);
+	PushFace(position + Vector3{ 0.5f, -0.5f, -0.5f },	Vector3::Up, -Vector3::Right,		(facesToGenerate & (1 << 2)) != 0, blockData.texIdSide);
+	PushFace(position + Vector3{ -0.5f, -0.5f,-0.5f },	Vector3::Up, -Vector3::Forward,		(facesToGenerate & (1 << 3)) != 0, blockData.texIdSide);
+																											   			   
+	PushFace(position + Vector3{ -0.5f, 0.5f, 0.5f },	Vector3::Forward, Vector3::Right,	(facesToGenerate & (1 << 4)) != 0, blockData.texIdTop); // Top	
+	PushFace(position + Vector3{ 0.5f, -0.5f, 0.5f },	Vector3::Forward, -Vector3::Right,	(facesToGenerate & (1 << 5)) != 0, blockData.texIdBottom); // Bottom
+}
+
+void Chunk::PushFace(const Vector3& position, const Vector3& up, const Vector3& right, bool draw, int uvID)
+{
+	if (!draw) 
+	{
+		return;
+	}
+
+	int blocksPerRow = 16;
+	float blockSize = 1.0f / blocksPerRow;
+	float xOffset = (float(uvID % blocksPerRow)) / blocksPerRow;
+	float yOffset = (float(uvID / blocksPerRow)) / blocksPerRow;
+
+	uint32_t a = m_vertexBuffer.PushVertex({ ToVec4(position),				{xOffset, yOffset + blockSize} });
+	uint32_t b = m_vertexBuffer.PushVertex({ ToVec4(position + right),		{xOffset + blockSize, yOffset + blockSize} });
+	uint32_t c = m_vertexBuffer.PushVertex({ ToVec4(position + up),			{xOffset, yOffset} });
+	uint32_t d = m_vertexBuffer.PushVertex({ ToVec4(position + up + right), {xOffset + blockSize, yOffset} });
 
 	m_indexBuffer.PushTriangle(a, c, b);
 	m_indexBuffer.PushTriangle(b, c, d);
@@ -39,7 +55,172 @@ void Chunk::Draw(DeviceResources* deviceRes)
 	deviceRes->GetD3DDeviceContext()->DrawIndexed(m_indexBuffer.Size(), 0, 0);
 }
 
+void Chunk::SetNeighbouringChunk(Chunk* chunk, NeighbouringChunkIndex chunkRelativePosition)
+{
+	m_neighbouringChunks[chunkRelativePosition] = chunk;
+}
+
 inline Vector4 Chunk::ToVec4(Vector3 v3)
 {
 	return Vector4(v3.x, v3.y, v3.z, 1.0f);
+}
+
+void Chunk::FillChunk()
+{
+	for (int y = 0; y < CHUNK_SIZE; ++y)
+	{
+		for (int x = 0; x < CHUNK_SIZE; ++x)
+		{
+			for (int z = 0; z < CHUNK_SIZE; ++z)
+			{
+				BlockId block;
+
+				if (y > 10) 
+				{
+					block = EMPTY;
+				}
+				else if (y > 9) 
+				{
+					block = GRASS;
+				}
+				else if (y > 8)
+				{
+					block = GLASS;
+				}
+				else if (y > 6)
+				{
+					block = DIRT;
+				}
+				else 
+				{
+					block = STONE;
+				}
+				m_blocks[CoordinatesToIndex(x, y, z)] = block;
+			}
+		}
+	}
+}
+
+void Chunk::GenerateMesh()
+{
+	for (int y = 0; y < CHUNK_SIZE; ++y)
+	{
+		for (int x = 0; x < CHUNK_SIZE; ++x)
+		{
+			for (int z = 0; z < CHUNK_SIZE; ++z)
+			{
+				BlockId block = m_blocks[CoordinatesToIndex(x, y, z)];
+				if (block == EMPTY) 
+				{
+					continue;
+				}
+				PushCube({ float(x), float(y), float(z) }, BlockData::Get(block), GetDisplayFaceFlags(x, y, z));
+			}
+		}
+	}
+}
+
+inline Vector3Int Chunk::IndexToCoordinates(int index)
+{
+	int z = index / (CHUNK_SIZE * CHUNK_SIZE);
+	int rst = index - (z * CHUNK_SIZE * CHUNK_SIZE);
+	int y = rst / CHUNK_SIZE;
+	return Vector3Int(rst - y * CHUNK_SIZE, y, z);
+}
+
+inline int Chunk::CoordinatesToIndex(const Vector3Int& coordinates)
+{
+	return CoordinatesToIndex(coordinates.X, coordinates.Y, coordinates.Z);
+}
+
+inline int Chunk::CoordinatesToIndex(int x, int y, int z)
+{
+	return x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
+}
+
+byte Chunk::GetDisplayFaceFlags(int x, int y, int z)
+{
+	byte result = 0; 
+
+	result |= ShouldDisplayFace(x, y, z, 0, 0, 1)	? 1 << 0 : 0;
+	result |= ShouldDisplayFace(x, y, z, 1, 0, 0)	? 1 << 1 : 0;
+	result |= ShouldDisplayFace(x, y, z, 0, 0, -1)	? 1 << 2 : 0;
+	result |= ShouldDisplayFace(x, y, z, -1, 0, 0)	? 1 << 3 : 0;
+	result |= ShouldDisplayFace(x, y, z, 0, 1, 0)	? 1 << 4 : 0;
+	result |= ShouldDisplayFace(x, y, z, 0, -1, 0)	? 1 << 5 : 0;
+
+	return result;
+}
+
+bool Chunk::ShouldDisplayFace(int x, int y, int z, int offsetx, int offsetY, int offsetZ)
+{
+	int newX = x + offsetx;
+	int newY = y + offsetY;
+	int newZ = z + offsetZ;
+
+	if (newX < 0 || CHUNK_SIZE <= newX)
+	{
+		return true;
+	}
+	if (newY < 0 || CHUNK_SIZE <= newY)
+	{
+		return true;
+	}
+	if (newZ < 0 || CHUNK_SIZE <= newZ)
+	{
+		return true;
+	}
+
+	BlockId currentBlock = GetBlockAtPosition(x, y, z);
+	BlockId otherBlock = GetBlockAtPosition(newX, newY, newZ);
+
+	if (otherBlock == currentBlock)
+	{
+		return false;
+	}
+
+
+	if (otherBlock == EMPTY || BlockData::Get(otherBlock).transparent)
+	{
+		return true;
+	}
+	return false;
+}
+
+const BlockId& Chunk::GetBlockAtPosition(int x, int y, int z)
+{
+	if (x < 0)
+	{
+		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::X_NEG];
+		return otherChunk != nullptr ? otherChunk->GetBlockAtPosition(x + CHUNK_SIZE, y, z) : EMPTY;
+	}
+	if (CHUNK_SIZE <= x)
+	{
+		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::X_POS];
+		return otherChunk != nullptr ? otherChunk->GetBlockAtPosition(x - CHUNK_SIZE, y, z) : EMPTY;
+	}
+
+	if (y < 0)
+	{
+		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::Y_NEG];
+		return otherChunk != nullptr ? otherChunk->GetBlockAtPosition(x, y + CHUNK_SIZE, z) : EMPTY;
+	}
+	if (CHUNK_SIZE <= y)
+	{
+		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::X_POS];
+		return otherChunk != nullptr ? otherChunk->GetBlockAtPosition(x, y - CHUNK_SIZE, z) : EMPTY;
+	}
+
+	if (z < 0)
+	{
+		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::Z_NEG];
+		return otherChunk != nullptr ? otherChunk->GetBlockAtPosition(x, y, z + CHUNK_SIZE) : EMPTY;
+	}
+	if (CHUNK_SIZE <= z)
+	{
+		Chunk* otherChunk = m_neighbouringChunks[NeighbouringChunkIndex::Z_POS];
+		return otherChunk != nullptr ? otherChunk->GetBlockAtPosition(x, y, z - CHUNK_SIZE) : EMPTY;
+	}
+
+	return m_blocks[CoordinatesToIndex(x, y, z)];
 }
