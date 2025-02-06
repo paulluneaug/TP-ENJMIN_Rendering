@@ -19,6 +19,10 @@ public:
 
 	void Create(DeviceResources* deviceRes)
 	{
+		if (m_data.size() == 0) 
+		{
+			return;
+		}
 		CD3D11_BUFFER_DESC bufferDescription
 		(
 			sizeof(TVertex) * m_data.size(),
@@ -62,6 +66,10 @@ public:
 
 	void Create(DeviceResources* deviceRes)
 	{
+		if (m_data.size() == 0)
+		{
+			return;
+		}
 		CD3D11_BUFFER_DESC bufferDescription
 		(
 			sizeof(uint32_t) * m_data.size(),
