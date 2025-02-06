@@ -7,6 +7,7 @@ struct Input {
 };
 
 float4 main(Input input) : SV_TARGET {
-    float4 color = tex.Sample(samplerState, input.uv/8);
+    float4 color = tex.Sample(samplerState, input.uv);
+    clip(color.a - 0.01f);
     return color;
 }
