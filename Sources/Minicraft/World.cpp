@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "World.h"
 
-const Vector3Int& World::WORLD_SIZE = Vector3Int{ 10, 3, 10 };
+const Vector3Int& World::WORLD_SIZE = Vector3Int{ 10, 10, 10 };
 
 World::World()
 {
@@ -61,7 +61,7 @@ void World::GenerateChunksValues()
 			for (int z = 0; z < WORLD_SIZE.Z; ++z)
 			{
 				Chunk* newChunk = CreateChunkAtPosition({ x, y, z });
-				newChunk->GenerateBlocksValues();
+				newChunk->GenerateBlocksValues(m_generationSettings);
 			}
 		}
 	}

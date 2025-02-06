@@ -3,6 +3,7 @@
 #include "Buffers.h"
 #include <Minicraft/Block.h>
 #include "Engine/Vector3Int.h"
+#include <Minicraft/GenerationSettings.h>
 
 using VertexLayout = VertexLayout_PositionUV;
 
@@ -32,19 +33,24 @@ private :
 
 	Chunk* m_neighbouringChunks[6];
 
+	Vector3Int m_chunkPostion;
+
 public:
 
 	Chunk(Vector3Int position);
 
-	void Generate(DeviceResources* deviceRes);
+	void Generate(DeviceResources* deviceRes, GenerationSettings& generationSettings);
 
 	void Draw(DeviceResources* deviceRes);
 
 	void SetNeighbouringChunk(Chunk* chunk, NeighbouringChunkIndex chunkRelativePosition);
-	void GenerateBlocksValues();
+	void GenerateBlocksValues(GenerationSettings& generationSettings);
 	void GenerateMesh(DeviceResources* deviceRes);
 
 	inline static Vector4 ToVec4(Vector3 v3);
+	inline static float Lerp(float a, float b, float t);
+	inline static int Lerp(int a, int b, float t);
+	inline static int Lerp(Vector2Int range, float t);
 
 private:
 

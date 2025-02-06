@@ -17,6 +17,8 @@ private :
 	std::unordered_map<Vector3Int, Chunk*, Vector3IntHasher> m_chunks;
 	ConstantBuffer<ModelData> m_constantBufferModel;
 
+	GenerationSettings m_generationSettings;
+
 public:
 	World();
 	~World();

@@ -1,36 +1,40 @@
 #include "pch.h"
 #include "Chunk.h"
+#include <SimpleMath.h>
 
-Chunk::Chunk(Vector3Int position)
+using namespace DirectX::SimpleMath;
+
+Chunk::Chunk(Vector3Int position):
+	m_chunkPostion(position)
 {
 	ModelMatrix = Matrix::CreateTranslation((position * CHUNK_SIZE).ToVector3());
 
-	for (int i = 0; i < 6; ++i) 
+	for (int i = 0; i < 6; ++i)
 	{
 		m_neighbouringChunks[i] = nullptr;
 	}
 }
 
-void Chunk::Generate(DeviceResources* deviceRes)
+void Chunk::Generate(DeviceResources* deviceRes, GenerationSettings& generationSettings)
 {
-	GenerateBlocksValues();
+	GenerateBlocksValues(generationSettings);
 	GenerateMesh(deviceRes);
 }
 
 void Chunk::PushCube(const Vector3& position, const BlockData& blockData, byte facesToGenerate)
 {
-	PushFace(position + Vector3{ -0.5f, -0.5f, 0.5f },	Vector3::Up, Vector3::Right,		(facesToGenerate & (1 << 0)) != 0, blockData.texIdSide);
-	PushFace(position + Vector3{ 0.5f, -0.5f, 0.5f },	Vector3::Up, Vector3::Forward,		(facesToGenerate & (1 << 1)) != 0, blockData.texIdSide);
-	PushFace(position + Vector3{ 0.5f, -0.5f, -0.5f },	Vector3::Up, -Vector3::Right,		(facesToGenerate & (1 << 2)) != 0, blockData.texIdSide);
-	PushFace(position + Vector3{ -0.5f, -0.5f,-0.5f },	Vector3::Up, -Vector3::Forward,		(facesToGenerate & (1 << 3)) != 0, blockData.texIdSide);
-																											   			   
-	PushFace(position + Vector3{ -0.5f, 0.5f, 0.5f },	Vector3::Forward, Vector3::Right,	(facesToGenerate & (1 << 4)) != 0, blockData.texIdTop); // Top	
-	PushFace(position + Vector3{ 0.5f, -0.5f, 0.5f },	Vector3::Forward, -Vector3::Right,	(facesToGenerate & (1 << 5)) != 0, blockData.texIdBottom); // Bottom
+	PushFace(position + Vector3{ -0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Right, (facesToGenerate & (1 << 0)) != 0, blockData.texIdSide);
+	PushFace(position + Vector3{ 0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Forward, (facesToGenerate & (1 << 1)) != 0, blockData.texIdSide);
+	PushFace(position + Vector3{ 0.5f, -0.5f, -0.5f }, Vector3::Up, -Vector3::Right, (facesToGenerate & (1 << 2)) != 0, blockData.texIdSide);
+	PushFace(position + Vector3{ -0.5f, -0.5f,-0.5f }, Vector3::Up, -Vector3::Forward, (facesToGenerate & (1 << 3)) != 0, blockData.texIdSide);
+
+	PushFace(position + Vector3{ -0.5f, 0.5f, 0.5f }, Vector3::Forward, Vector3::Right, (facesToGenerate & (1 << 4)) != 0, blockData.texIdTop); // Top	
+	PushFace(position + Vector3{ 0.5f, -0.5f, 0.5f }, Vector3::Forward, -Vector3::Right, (facesToGenerate & (1 << 5)) != 0, blockData.texIdBottom); // Bottom
 }
 
 void Chunk::PushFace(const Vector3& position, const Vector3& up, const Vector3& right, bool draw, int uvID)
 {
-	if (!draw) 
+	if (!draw)
 	{
 		return;
 	}
@@ -67,35 +71,67 @@ inline Vector4 Chunk::ToVec4(Vector3 v3)
 	return Vector4(v3.x, v3.y, v3.z, 1.0f);
 }
 
-void Chunk::GenerateBlocksValues()
+inline float Chunk::Lerp(float a, float b, float t)
 {
-	for (int y = 0; y < CHUNK_SIZE; ++y)
+	return a + (b - a) * t;
+}
+
+inline int Chunk::Lerp(int a, int b, float t)
+{
+	return a + (b - a) * t;
+}
+
+inline int Chunk::Lerp(Vector2Int range, float t)
+{
+	return Lerp(range.X, range.Y, t);
+}
+
+void Chunk::GenerateBlocksValues(GenerationSettings& generationSettings)
+{
+	for (int x = 0; x < CHUNK_SIZE; ++x)
 	{
-		for (int x = 0; x < CHUNK_SIZE; ++x)
+		int worldX = m_chunkPostion.X * CHUNK_SIZE + x;
+		for (int z = 0; z < CHUNK_SIZE; ++z)
 		{
-			for (int z = 0; z < CHUNK_SIZE; ++z)
+			int worldZ = m_chunkPostion.Z * CHUNK_SIZE + z;
+
+			float stoneNoiseValue = generationSettings.StoneNoiseGenerator->Sample2DNoiseAtPosition(worldX, worldZ);
+			float dirtNoiseValue = generationSettings.DirtNoiseGenerator->Sample2DNoiseAtPosition(worldX, worldZ);
+
+			int stoneEndHeight = Lerp(generationSettings.StoneWidthRange, stoneNoiseValue);
+			int dirtEndHeight = stoneEndHeight + Lerp(generationSettings.DirtWidthRange, dirtNoiseValue);
+
+			for (int y = 0; y < CHUNK_SIZE; ++y)
 			{
+				int worldY = m_chunkPostion.Y * CHUNK_SIZE + y;
+
+				float caveNoiseValue = generationSettings.CaveNoiseGenerator->Sample3DNoiseAtPosition(worldX, worldY, worldZ);
+
 				BlockId block;
 
-				if (y > 10) 
+				if (worldY == 0)
+				{
+					block = BEDROCK;
+				}
+				else if (caveNoiseValue > generationSettings.CaveThreshold)
 				{
 					block = EMPTY;
 				}
-				else if (y > 9) 
+				else if (worldY < stoneEndHeight)
 				{
-					block = GRASS;
+					block = STONE;
 				}
-				else if (y > 8)
-				{
-					block = GLASS;
-				}
-				else if (y > 6)
+				else if (worldY < dirtEndHeight)
 				{
 					block = DIRT;
 				}
-				else 
+				else if (worldY < dirtEndHeight + 1)
 				{
-					block = STONE;
+					block = GRASS;
+				}
+				else
+				{
+					block = EMPTY;
 				}
 				m_blocks[CoordinatesToIndex(x, y, z)] = block;
 			}
@@ -112,7 +148,7 @@ void Chunk::GenerateMesh(DeviceResources* deviceRes)
 			for (int z = 0; z < CHUNK_SIZE; ++z)
 			{
 				BlockId block = m_blocks[CoordinatesToIndex(x, y, z)];
-				if (block == EMPTY) 
+				if (block == EMPTY)
 				{
 					continue;
 				}
@@ -145,14 +181,14 @@ inline int Chunk::CoordinatesToIndex(int x, int y, int z)
 
 byte Chunk::GetDisplayFaceFlags(int x, int y, int z)
 {
-	byte result = 0; 
+	byte result = 0;
 
-	result |= ShouldDisplayFace(x, y, z, 0, 0, 1)	? 1 << 0 : 0;
-	result |= ShouldDisplayFace(x, y, z, 1, 0, 0)	? 1 << 1 : 0;
-	result |= ShouldDisplayFace(x, y, z, 0, 0, -1)	? 1 << 2 : 0;
-	result |= ShouldDisplayFace(x, y, z, -1, 0, 0)	? 1 << 3 : 0;
-	result |= ShouldDisplayFace(x, y, z, 0, 1, 0)	? 1 << 4 : 0;
-	result |= ShouldDisplayFace(x, y, z, 0, -1, 0)	? 1 << 5 : 0;
+	result |= ShouldDisplayFace(x, y, z, 0, 0, 1) ? 1 << 0 : 0;
+	result |= ShouldDisplayFace(x, y, z, 1, 0, 0) ? 1 << 1 : 0;
+	result |= ShouldDisplayFace(x, y, z, 0, 0, -1) ? 1 << 2 : 0;
+	result |= ShouldDisplayFace(x, y, z, -1, 0, 0) ? 1 << 3 : 0;
+	result |= ShouldDisplayFace(x, y, z, 0, 1, 0) ? 1 << 4 : 0;
+	result |= ShouldDisplayFace(x, y, z, 0, -1, 0) ? 1 << 5 : 0;
 
 	return result;
 }
