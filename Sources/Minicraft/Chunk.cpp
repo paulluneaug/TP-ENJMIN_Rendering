@@ -11,6 +11,7 @@ Chunk::Chunk(World* world, Vector3 pos) {
 
 	this->world = world;
 	model = Matrix::CreateTranslation(pos);
+	bounds = DirectX::BoundingBox(pos + Vector3(CHUNK_SIZE / 2 - 0.5, CHUNK_SIZE / 2 - 0.5, CHUNK_SIZE / 2 - 0.5), Vector3(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2));
 }
 
 BlockId* Chunk::GetCubeLocal(int lx, int ly, int lz) {
@@ -74,9 +75,11 @@ void Chunk::Generate(DeviceResources* deviceRes) {
 		vb.Create(deviceRes);
 	if (ib.Size() != 0)
 		ib.Create(deviceRes);
+	needRegen = false;
 }
 
 void Chunk::Draw(DeviceResources* deviceRes) {
+	if (vb.Size() == 0) return;
 	vb.Apply(deviceRes, 0);
 	ib.Apply(deviceRes);
 	deviceRes->GetD3DDeviceContext()->DrawIndexed(ib.Size(), 0, 0);

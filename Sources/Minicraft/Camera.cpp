@@ -60,6 +60,9 @@ void Camera::Update(float dt, Keyboard::State kb, Mouse* mouse) {
 	Vector3 newUp = Vector3::Transform(Vector3::Up, camRot);
 
 	view = Matrix::CreateLookAt(camPos, camPos + newForward, newUp);
+
+	BoundingFrustum::CreateFromMatrix(bounds, projection, true);
+	bounds.Transform(bounds, view.Invert());
 }
 
 void Camera::ApplyCamera(DeviceResources* deviceRes) {

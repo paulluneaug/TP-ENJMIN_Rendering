@@ -36,6 +36,7 @@
 #include "d3d11shadertracing.h"
 
 #include <DirectXMath.h>
+#include <DirectXCollision.h>
 #include <DirectXColors.h>
 
 #include <algorithm>

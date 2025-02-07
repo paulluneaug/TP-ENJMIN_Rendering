@@ -27,6 +27,13 @@ World::World() {
 	}
 }
 
+World::~World() {
+	for (int idx = 0; idx < WORLD_SIZE * WORLD_SIZE * WORLD_HEIGHT; idx++) {
+		delete chunks[idx];
+		chunks[idx] = nullptr;
+	}
+}
+
 void World::Generate(DeviceResources* deviceRes) {
 	siv::BasicPerlinNoise<float> perlin;
 	for (int x = 0; x < CHUNK_SIZE * WORLD_SIZE; x++) {
@@ -47,13 +54,17 @@ void World::Generate(DeviceResources* deviceRes) {
 	constantBufferModel.Create(deviceRes);
 }
 
-void World::Draw(DeviceResources* deviceRes) {
+void World::Draw(Camera* camera, DeviceResources* deviceRes) {
 	constantBufferModel.ApplyToVS(deviceRes, 0);
 
 	for (int idx = 0; idx < WORLD_SIZE * WORLD_SIZE * WORLD_HEIGHT; idx++) {
-		constantBufferModel.data.model = chunks[idx]->model.Transpose();
-		constantBufferModel.UpdateBuffer(deviceRes);
-		chunks[idx]->Draw(deviceRes);
+		if (chunks[idx]->needRegen) chunks[idx]->Generate(deviceRes);
+
+		if (chunks[idx]->bounds.Intersects(camera->bounds)) {
+			constantBufferModel.data.model = chunks[idx]->model.Transpose();
+			constantBufferModel.UpdateBuffer(deviceRes);
+			chunks[idx]->Draw(deviceRes);
+		}
 	}
 }
 
@@ -74,4 +85,30 @@ BlockId* World::GetCubes(int gx, int gy, int gz) {
 	auto chunk = GetChunk(cx, cy, cz);
 	if (!chunk) return nullptr;
 	return chunk->GetCubeLocal(lx, ly, lz);
+}
+
+void World::MakeChunkDirty(int gx, int gy, int gz) {
+	auto chunk = GetChunkFromCoordinates(gx + 1, gy, gz);
+	if (chunk) chunk->needRegen = true;
+}
+
+Chunk* World::GetChunkFromCoordinates(int gx, int gy, int gz) {
+	int cx = gx / CHUNK_SIZE;
+	int cy = gy / CHUNK_SIZE;
+	int cz = gz / CHUNK_SIZE;
+	return GetChunk(cx, cy, cz);
+}
+
+void World::UpdateBlock(int gx, int gy, int gz, BlockId block) {
+	auto cube = GetCubes(gx, gy, gz);
+	if (!cube) return;
+	*cube = block;
+
+	MakeChunkDirty(gx, gy, gz);
+	MakeChunkDirty(gx + 1, gy, gz);
+	MakeChunkDirty(gx - 1, gy, gz);
+	MakeChunkDirty(gx, gy + 1, gz);
+	MakeChunkDirty(gx, gy - 1, gz);
+	MakeChunkDirty(gx, gy, gz + 1);
+	MakeChunkDirty(gx, gy, gz - 1);
 }

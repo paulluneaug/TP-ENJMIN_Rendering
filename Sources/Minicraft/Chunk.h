@@ -22,6 +22,9 @@ class Chunk {
 	Chunk* adjZNeg = nullptr;
 public:
 	Matrix model;
+	DirectX::BoundingBox bounds;
+	bool needRegen = false;
+
 	Chunk(World* world, Vector3 pos);
 
 	void Generate(DeviceResources* deviceRes);

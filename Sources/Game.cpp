@@ -36,6 +36,8 @@ Game::Game() noexcept(false) {
 Game::~Game() {
 	delete basicShader;
 	g_inputLayouts.clear();
+
+	
 }
 
 void Game::Initialize(HWND window, int width, int height) {
@@ -106,7 +108,7 @@ void Game::Render(DX::StepTimer const& timer) {
 
 	texture.Apply(m_deviceResources.get());
 
-	world.Draw(m_deviceResources.get());
+	world.Draw(&camera, m_deviceResources.get());
 
 	m_deviceResources->Present();
 }
