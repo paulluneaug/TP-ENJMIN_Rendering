@@ -24,8 +24,6 @@ using Microsoft::WRL::ComPtr;
 Shader* basicShader;
 
 Texture texture(L"terrain");
-VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
-IndexBuffer indexBuffer;
 Camera camera(75, 1);
 World world;
 
@@ -57,16 +55,6 @@ void Game::Initialize(HWND window, int width, int height) {
 	GenerateInputLayout<VertexLayout_PositionUV>(m_deviceResources.get(), basicShader);
 
 	texture.Create(m_deviceResources.get());
-
-	vertexBuffer.PushVertex({{-0.5f, -0.5f,  0.0f, 1.0f}, { 0.0f, 0.0f }});
-	vertexBuffer.PushVertex({{-0.5f,  0.5f,  0.0f, 1.0f}, { 0.0f, 1.0f }});
-	vertexBuffer.PushVertex({{ 0.5f,  0.5f,  0.0f, 1.0f}, { 1.0f, 1.0f }});
-	vertexBuffer.PushVertex({{ 0.5f, -0.5f,  0.0f, 1.0f}, { 1.0f, 0.0f }});
-	vertexBuffer.Create(m_deviceResources.get());
-
-	indexBuffer.PushTriangle(0, 2, 1);
-	indexBuffer.PushTriangle(3, 1, 0);
-	indexBuffer.Create(m_deviceResources.get());
 
 	camera.UpdateAspectRatio((float)width / (float)height);
 
@@ -120,20 +108,6 @@ void Game::Render(DX::StepTimer const& timer) {
 
 	world.Draw(m_deviceResources.get());
 
-	/*vertexBuffer.Apply(m_deviceResources.get());
-	indexBuffer.Apply(m_deviceResources.get());
-
-	for(float x = -0.5; x < 0.5; x += 0.1) {
-		constantBufferModel.data.model = Matrix::CreateTranslation(Vector3(0, 0, 0)).Transpose();
-		constantBufferModel.UpdateBuffer(m_deviceResources.get());
-		constantBufferCamera.data.view = view.Transpose();
-		constantBufferCamera.data.projection = projection.Transpose();
-		constantBufferCamera.UpdateBuffer(m_deviceResources.get());
-
-		context->DrawIndexed(indexBuffer.Size(), 0, 0);
-	}*/
-
-	// envoie nos commandes au GPU pour etre afficher � l'�cran
 	m_deviceResources->Present();
 }
 
