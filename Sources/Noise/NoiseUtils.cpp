@@ -41,9 +41,13 @@ uint32_t NoiseUtils::Hash(uint32_t s)
 
 float NoiseUtils::RandomFloat(uint32_t& r_seed)
 {
+    return RandomFloat01(r_seed) * 2 - 1; // [-1;1]
+}
+
+float NoiseUtils::RandomFloat01(uint32_t& r_seed)
+{
     r_seed = Hash(r_seed);
-    float random = float(r_seed) / 4294967295.0; // 2^32-1 
-    return random * 2 - 1; // [-1;1]
+    return float(r_seed) / 4294967295.0; // 2^32-1
 }
 
 Vector3 NoiseUtils::RandomFloat3InsideUnitSphere(uint32_t& r_seed)
@@ -56,24 +60,7 @@ Vector3 NoiseUtils::RandomFloat3InsideUnitSphere(uint32_t& r_seed)
     return attempt;
 }
 
-Vector3 NoiseUtils::RandomGradient3D(int ix, int iy, int iz, int gradientOffset)
-{
-    // No precomputed gradients mean this works for any number of grid coordinates
-    constexpr uint32_t w = 8 * 4;
-    constexpr uint32_t s = w / 2;
-    uint32_t a = ix, b = iy, c = iz;
-    a *= 3284157443;
-    b ^= a << s | a >> w - s;
-    b *= 1911520717 - abs(gradientOffset);
-    c ^= b << s | b >> w - s;
-    c *= 1529716214;
-    a ^= c << s | c >> w - s;
-    a *= 2048419325;
-
-    return RandomFloat3InsideUnitSphere(a);
-}
-
-Vector2 NoiseUtils::RandomGradient2D(int ix, int iy, int gradientOffset)
+uint32_t NoiseUtils::HashCoordinates2D(int ix, int iy, int offset)
 {
     // No precomputed gradients mean this works for any number of grid coordinates
     constexpr uint32_t w = 8 * 4;
@@ -81,11 +68,50 @@ Vector2 NoiseUtils::RandomGradient2D(int ix, int iy, int gradientOffset)
     uint32_t a = ix, b = iy;
     a *= 3284157443;
     b ^= a << s | a >> w - s;
-    b *= 1911520717 - abs(gradientOffset);
+    b *= 1911520717 - abs(offset);
     a ^= b << s | b >> w - s;
     a *= 2048419325;
+    return a;
+}
 
+uint32_t NoiseUtils::HashCoordinates3D(int ix, int iy, int iz, int offset)
+{
+    // No precomputed gradients mean this works for any number of grid coordinates
+    constexpr uint32_t w = 8 * 4;
+    constexpr uint32_t s = w / 2;
+    uint32_t a = ix, b = iy, c = iz;
+    a *= 3284157443;
+    b ^= a << s | a >> w - s;
+    b *= 1911520717 - abs(offset);
+    c ^= b << s | b >> w - s;
+    c *= 1529716214;
+    a ^= c << s | c >> w - s;
+    a *= 2048419325;
+    return a;
+}
+
+Vector2 NoiseUtils::RandomGradient2D(int ix, int iy, int gradientOffset)
+{
+    uint32_t a = HashCoordinates2D(ix, iy, gradientOffset);
     return Vector2(cos(a), sin(a));
+}
+
+Vector3 NoiseUtils::RandomGradient3D(int ix, int iy, int iz, int gradientOffset)
+{
+    uint32_t a = HashCoordinates3D(ix, iy, iz, gradientOffset);
+    return RandomFloat3InsideUnitSphere(a);
+}
+
+float NoiseUtils::DotGridGradient2D(int ix, int iy, float x, float y, int gradientOffset)
+{
+    Vector2 randomVec = RandomGradient2D(ix, iy, gradientOffset);
+
+    // Compute the distance vector
+    float dx = x - (float)ix;
+    float dy = y - (float)iy;
+
+    // Compute the dot-product
+    return (dx * randomVec.x + dy * randomVec.y);
 }
 
 float NoiseUtils::DotGridGradient3D(int ix, int iy, int iz, float x, float y, float z, int gradientOffset)
@@ -99,16 +125,4 @@ float NoiseUtils::DotGridGradient3D(int ix, int iy, int iz, float x, float y, fl
 
     // Compute the dot-product
     return (dx * randomVec.x + dy * randomVec.y + dz * randomVec.z);
-}
-
-float NoiseUtils::DotGridGradient2D(int ix, int iy, float x, float y, int gradientOffset)
-{
-    Vector2 randomVec = RandomGradient2D(ix, iy, gradientOffset);
-
-    // Compute the distance vector
-    float dx = x - (float)ix;
-    float dy = y - (float)iy;
-
-    // Compute the dot-product
-    return (dx * randomVec.x + dy * randomVec.y);
 }

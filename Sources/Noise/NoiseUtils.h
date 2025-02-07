@@ -14,14 +14,17 @@ public:
     static uint32_t Hash(uint32_t s);
 
     static float RandomFloat(uint32_t& r_seed);
+    static float RandomFloat01(uint32_t& r_seed);
 
     static Vector3 RandomFloat3InsideUnitSphere(uint32_t& r_seed);
 
-    // Noise generation inspired by the Perlin Noise Wikipedia article (https://en.wikipedia.org/wiki/Perlin_noise)
-    static Vector3 RandomGradient3D(int ix, int iy, int iz, int gradientOffset);
-    static Vector2 RandomGradient2D(int ix, int iy, int gradientOffset);
+    static uint32_t HashCoordinates2D(int ix, int iy, int offset);
+    static uint32_t HashCoordinates3D(int ix, int iy, int iz, int offset);
 
-    static float DotGridGradient3D(int ix, int iy, int iz, float x, float y, float z, int gradientOffset);
+    static Vector2 RandomGradient2D(int ix, int iy, int gradientOffset);
+    static Vector3 RandomGradient3D(int ix, int iy, int iz, int gradientOffset);
+
     static float DotGridGradient2D(int ix, int iy, float x, float y, int gradientOffset);
+    static float DotGridGradient3D(int ix, int iy, int iz, float x, float y, float z, int gradientOffset);
 };
 

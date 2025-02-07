@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "World.h"
 
-const Vector3Int& World::WORLD_SIZE = Vector3Int{ 10, 10, 10 };
+const Vector3Int& World::WORLD_SIZE = Vector3Int{ 8, 8, 8 };
 
 World::World()
 {

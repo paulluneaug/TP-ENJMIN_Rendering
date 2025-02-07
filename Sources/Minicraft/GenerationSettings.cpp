@@ -24,9 +24,9 @@ GenerationSettings::GenerationSettings()
 
 	std::vector<PerlinNoiseGenerator::NoiseLayer> caveNoiseLayers =
 	{
-		PerlinNoiseGenerator::NoiseLayer{ 8.0f, 0, 16, false },
-		PerlinNoiseGenerator::NoiseLayer{ 4.0f, 0, 8, false },
-		PerlinNoiseGenerator::NoiseLayer{ 2.0f, 0, 4, false },
+		PerlinNoiseGenerator::NoiseLayer{ 8.0f, 16},
+		PerlinNoiseGenerator::NoiseLayer{ 4.0f, 8 },
+		PerlinNoiseGenerator::NoiseLayer{ 2.0f, 4 },
 	};
 	CaveNoiseGenerator = new PerlinNoiseGenerator(caveNoiseLayers);
 	CaveThreshold = 0.6f;

@@ -6,15 +6,15 @@ class PerlinNoiseGenerator : public INoiseGenerator
 public:
     struct NoiseLayer
     {
-        float LayerWeigth;
+        float LayerWeight;
 
         int GradientOffset;
         int NoiseScale;
 
         bool UseSmootherStep;
 
-        NoiseLayer(float layerWeigth, int noiseScale, int gradientOffset = 0, bool useSmootherStep = false)
-            : LayerWeigth(layerWeigth), GradientOffset(gradientOffset), NoiseScale(noiseScale), UseSmootherStep(useSmootherStep)
+        NoiseLayer(float layerWeight, int noiseScale, int gradientOffset = 0, bool useSmootherStep = false)
+            : LayerWeight(layerWeight), GradientOffset(gradientOffset), NoiseScale(noiseScale), UseSmootherStep(useSmootherStep)
         {
         }
     };

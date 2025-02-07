@@ -8,7 +8,7 @@ PerlinNoiseGenerator::PerlinNoiseGenerator(std::vector<NoiseLayer> layers) :
     float layersWeightsSum = 0.0f;
     for (NoiseLayer& layer : m_layers) 
     {
-        layersWeightsSum += layer.LayerWeigth;
+        layersWeightsSum += layer.LayerWeight;
     }
     m_layersWeightsMultiplier = 1.0f / layersWeightsSum;
 }
@@ -65,7 +65,7 @@ float PerlinNoiseGenerator::Sample3DNoiseAtPosition(int xPos, int yPos, int zPos
 
         layerValue = layerValue / 2 + 0.5f;
 
-        value += layerValue * currentLayer.LayerWeigth * m_layersWeightsMultiplier;
+        value += layerValue * currentLayer.LayerWeight * m_layersWeightsMultiplier;
     }
 
     return value;
@@ -106,7 +106,7 @@ float PerlinNoiseGenerator::Sample2DNoiseAtPosition(int xPos, int yPos)
 
         layerValue = layerValue / 2 + 0.5f;
 
-        value += layerValue * currentLayer.LayerWeigth * m_layersWeightsMultiplier;
+        value += layerValue * currentLayer.LayerWeight * m_layersWeightsMultiplier;
     }
     return value;
 }
