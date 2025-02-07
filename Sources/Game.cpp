@@ -12,7 +12,6 @@
 #include "Engine/Texture.h"
 #include "Minicraft/World.h"
 #include "Minicraft/Camera.h"
-#include "Minicraft/Cube.h"
 
 extern void ExitGame() noexcept;
 

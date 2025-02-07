@@ -13,6 +13,13 @@ class Chunk {
 
 	VertexBuffer<VertexLayout_PositionUV> vb;
 	IndexBuffer ib;
+
+	Chunk* adjXPos = nullptr;
+	Chunk* adjXNeg = nullptr;
+	Chunk* adjYPos = nullptr;
+	Chunk* adjYNeg = nullptr;
+	Chunk* adjZPos = nullptr;
+	Chunk* adjZNeg = nullptr;
 public:
 	Matrix model;
 	Chunk(World* world, Vector3 pos);
@@ -25,22 +32,6 @@ private:
 	void PushCube(int x, int y, int z);
 	void PushFace(Vector3 pos, Vector3 up, Vector3 right, int id);
 	bool ShouldRenderFace(int lx, int ly, int lz, int dx, int dy, int dz);
+
+	friend class World;
 };
-
-/*
-class Cube {
-	VertexBuffer<VertexLayout_PositionUV> vb;
-	IndexBuffer ib;
-
-public:
-	Matrix model;
-	BlockId id = BlockId::GRASS;
-
-	Cube(Vector3 pos);
-
-	void Generate(DeviceResources* deviceRes);
-	void Draw(DeviceResources* deviceRes);
-
-private:
-	void PushFace(Vector3 pos, Vector3 up, Vector3 right, int id);
-};*/

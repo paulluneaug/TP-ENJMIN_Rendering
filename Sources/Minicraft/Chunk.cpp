@@ -1,77 +1,25 @@
 #include "pch.h"
 
-#include "Cube.h"
+#include "Chunk.h"
 
 Vector4 ToVec4(const Vector3& v) {
 	return Vector4(v.x, v.y, v.z, 1.0f);
 }
 
-/*
-Cube::Cube(Vector3 pos) {
-	model = Matrix::CreateTranslation(pos);
-}
-
-void Cube::Generate(DeviceResources* deviceRes) {
-	auto& data = BlockData::Get(id);
-	float uvxSide = (data.texIdSide % 16) / BLOCK_TEXSIZE;
-	float uvySide = (data.texIdSide / 16) / BLOCK_TEXSIZE;
-
-	PushFace({ -0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Right, data.texIdSide);
-	PushFace({  0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Forward, data.texIdSide);
-	PushFace({  0.5f, -0.5f,-0.5f }, Vector3::Up, Vector3::Left, data.texIdSide);
-	PushFace({ -0.5f, -0.5f,-0.5f }, Vector3::Up, Vector3::Backward, data.texIdSide);
-	PushFace({ -0.5f,  0.5f, 0.5f }, Vector3::Forward, Vector3::Right, data.texIdTop);
-	PushFace({ -0.5f, -0.5f,-0.5f }, Vector3::Backward, Vector3::Right, data.texIdBottom);
-	
-	vb.Create(deviceRes);
-	ib.Create(deviceRes);
-}
-
-void Cube::Draw(DeviceResources* deviceRes) {
-	vb.Apply(deviceRes, 0);
-	ib.Apply(deviceRes);
-	deviceRes->GetD3DDeviceContext()->DrawIndexed(ib.Size(), 0, 0);
-}
-
-
-
-
-void Cube::PushFace(Vector3 pos, Vector3 up, Vector3 right, int id) {
-	Vector2 uv(
-		(id % 16) * BLOCK_TEXSIZE,
-		(id / 16) * BLOCK_TEXSIZE
-	);
-
-	auto a = vb.PushVertex({ ToVec4(pos), uv + Vector2::UnitY * BLOCK_TEXSIZE });
-	auto b = vb.PushVertex({ ToVec4(pos + up), uv });
-	auto c = vb.PushVertex({ ToVec4(pos + right), uv + Vector2::UnitX * BLOCK_TEXSIZE + Vector2::UnitY * BLOCK_TEXSIZE });
-	auto d = vb.PushVertex({ ToVec4(pos + up + right), uv + Vector2::UnitX * BLOCK_TEXSIZE });
-	ib.PushTriangle(a, b, c);
-	ib.PushTriangle(c, b, d);
-}*/
-
 Chunk::Chunk(World* world, Vector3 pos) {
+	memset(data, EMPTY, sizeof(data));
+
 	this->world = world;
 	model = Matrix::CreateTranslation(pos);
-
-	memset(data, EMPTY, sizeof(data));
-	for (int x = 0; x < CHUNK_SIZE; x++) {
-		for (int z = 0; z < CHUNK_SIZE; z++) {
-			for (int y = 0; y < CHUNK_SIZE / 2; y++) {
-				auto block = GetCubeLocal(x, y, z);
-				*block = DIRT;
-			}
-		}
-	}
 }
 
 BlockId* Chunk::GetCubeLocal(int lx, int ly, int lz) {
-	if (lx < 0) return nullptr;
-	if (ly < 0) return nullptr;
-	if (lz < 0) return nullptr;
-	if (lx >= CHUNK_SIZE) return nullptr;
-	if (ly >= CHUNK_SIZE) return nullptr;
-	if (lz >= CHUNK_SIZE) return nullptr;
+	if (lx < 0) return adjXNeg ? adjXNeg->GetCubeLocal(CHUNK_SIZE - 1, ly, lz) : nullptr;
+	if (ly < 0) return adjYNeg ? adjYNeg->GetCubeLocal(lx, CHUNK_SIZE - 1, lz) : nullptr;
+	if (lz < 0) return adjZNeg ? adjZNeg->GetCubeLocal(lx, ly, CHUNK_SIZE - 1) : nullptr;
+	if (lx >= CHUNK_SIZE) return adjXPos ? adjXPos->GetCubeLocal(0, ly, lz) : nullptr;
+	if (ly >= CHUNK_SIZE) return adjYPos ? adjYPos->GetCubeLocal(lx, 0, lz) : nullptr;
+	if (lz >= CHUNK_SIZE) return adjZPos ? adjZPos->GetCubeLocal(lx, ly, 0) : nullptr;
 	return &data[lx + ly * CHUNK_SIZE + lz * CHUNK_SIZE * CHUNK_SIZE];
 }
 
@@ -122,8 +70,10 @@ void Chunk::Generate(DeviceResources* deviceRes) {
 		}
 	}
 
-	vb.Create(deviceRes);
-	ib.Create(deviceRes);
+	if (vb.Size() != 0)
+		vb.Create(deviceRes);
+	if (ib.Size() != 0)
+		ib.Create(deviceRes);
 }
 
 void Chunk::Draw(DeviceResources* deviceRes) {

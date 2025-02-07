@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Minicraft/Block.h"
-#include "Minicraft/Cube.h"
+#include "Minicraft/Chunk.h"
 
-#define WORLD_SIZE 3
-#define WORLD_HEIGHT 1
+#define WORLD_SIZE 5
+#define WORLD_HEIGHT 3
 
 class Chunk;
 class World {
@@ -19,5 +19,8 @@ public:
 	void Generate(DeviceResources* deviceRes);
 	void Draw(DeviceResources* deviceRes);
 
+	Chunk* GetChunk(int cx, int cy, int cz);
 	BlockId* GetCubes(int gx, int gy, int gz);
+
+	friend class Chunk;
 };
