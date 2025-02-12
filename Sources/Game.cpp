@@ -11,7 +11,7 @@
 #include "Engine/VertexLayout.h"
 #include "Engine/Texture.h"
 #include "Minicraft/World.h"
-#include "Minicraft/Camera.h"
+#include "Minicraft/Player.h"
 
 extern void ExitGame() noexcept;
 
@@ -103,8 +103,8 @@ Shader blockShader(L"Block");
 VertexBuffer<VertexLayout_PositionColor> debugLine;
 
 Texture texture(L"terrain");
-Camera camera(75, 1);
 World world;
+Player player(&world, Vector3(16, 16, 16));
 
 // Game
 Game::Game() noexcept(false) {
@@ -122,6 +122,7 @@ void Game::Initialize(HWND window, int width, int height) {
 	m_keyboard = std::make_unique<Keyboard>();
 	m_mouse = std::make_unique<Mouse>();
 	m_mouse->SetWindow(window);
+	m_mouse->SetMode(Mouse::MODE_RELATIVE);
 
 	// Initialize the Direct3D resources
 	m_deviceResources->SetWindow(window, width, height);
@@ -135,7 +136,7 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	texture.Create(m_deviceResources.get());
 
-	camera.UpdateAspectRatio((float)width / (float)height);
+	player.GetCamera()->UpdateAspectRatio((float)width / (float)height);
 
 	world.Generate(m_deviceResources.get());
 
@@ -163,9 +164,10 @@ void Game::Tick() {
 // Updates the world.
 void Game::Update(DX::StepTimer const& timer) {
 	auto const kb = m_keyboard->GetState();
+	auto const ms = m_mouse->GetState();
 	
-	camera.Update(timer.GetElapsedSeconds(), kb, m_mouse.get());
-	
+	player.Update(timer.GetElapsedSeconds(), kb, ms);
+
 	if (kb.Escape)
 		ExitGame();
 
@@ -192,11 +194,11 @@ void Game::Render(DX::StepTimer const& timer) {
 	
 	ApplyInputLayout<VertexLayout_PositionUV>(m_deviceResources.get());
 
-	camera.ApplyCamera(m_deviceResources.get());
+	player.GetCamera()->ApplyCamera(m_deviceResources.get());
 
 	blockShader.Apply(m_deviceResources.get());
 	texture.Apply(m_deviceResources.get());
-	world.Draw(&camera, m_deviceResources.get());
+	world.Draw(player.GetCamera(), m_deviceResources.get());
 
 	// todo debug line
 	ApplyInputLayout<VertexLayout_PositionColor>(m_deviceResources.get());
@@ -235,7 +237,7 @@ void Game::OnWindowSizeChanged(int width, int height) {
 
 	// The windows size has changed:
 	// We can realloc here any resources that depends on the target resolution (post processing etc)
-	camera.UpdateAspectRatio((float)width / (float)height);
+	player.GetCamera()->UpdateAspectRatio((float)width / (float)height);
 }
 
 void Game::OnDeviceLost() {

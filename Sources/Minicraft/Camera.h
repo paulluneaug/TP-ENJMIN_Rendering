@@ -6,7 +6,7 @@ using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
 class Camera {
-	float fov;
+protected:
 	float nearPlane = 0.01f;
 	float farPlane = 500.0f;
 	
@@ -20,14 +20,33 @@ class Camera {
 		Matrix mProjection;
 	};
 	ConstantBuffer<MatrixData>* cbCamera = nullptr;
+
+	void UpdateViewMatrix();
 public:
 	DirectX::BoundingFrustum bounds;
 
-	Camera(float fov, float aspectRatio);
-	~Camera();
+	Camera();
+	virtual ~Camera();
 
-	void UpdateAspectRatio(float aspectRatio);
-	void Update(float dt, DirectX::Keyboard::State kb, DirectX::Mouse* ms);
+	Vector3 GetPosition() const { return camPos; };
+	Quaternion GetRotation() const { return camRot; };
+	void SetPosition(const Vector3& pos) { camPos = pos; UpdateViewMatrix(); };
+	void SetRotation(const Quaternion& rot) { camRot = rot; UpdateViewMatrix(); };
+
+	Vector3 Forward() const { return Vector3::TransformNormal(Vector3::Forward, view.Invert()); }
+	Vector3 Up() const { return Vector3::TransformNormal(Vector3::Up, view.Invert()); }
+	Vector3 Right() const { return Vector3::TransformNormal(Vector3::Right, view.Invert()); }
+
+	Matrix GetViewMatrix() const { return view; }
+	Matrix GetInverseViewMatrix() const { return view.Invert(); }
 
 	void ApplyCamera(DeviceResources* deviceRes);
+};
+
+class PerspectiveCamera : public Camera {
+	float fov;
+public:
+	PerspectiveCamera(float fov, float aspectRatio);
+
+	void UpdateAspectRatio(float aspectRatio);
 };
