@@ -34,16 +34,28 @@ World::~World() {
 	}
 }
 
+float scaleHuge = 50;
+float intensityHuge = 20;
+float scaleMedium = 10;
+float intensityMedium = 5;
+
 void World::Generate(DeviceResources* deviceRes) {
 	siv::BasicPerlinNoise<float> perlin;
 	for (int x = 0; x < CHUNK_SIZE * WORLD_SIZE; x++) {
 		for (int z = 0; z < CHUNK_SIZE * WORLD_SIZE; z++) {
-			// perlin.noise2D_01(x, z);
-			for (int y = 0; y < 5; y++) {
+			int stoneLayer = 2 + floor(perlin.noise2D_01(x / scaleHuge, z / scaleHuge) * intensityHuge);
+			for (int y = 0; y < stoneLayer; y++) {
+				auto block = GetCube(x, y, z);
+				*block = STONE;
+			}
+
+			int dirtLayer = stoneLayer + 1 + floor(perlin.noise2D_01(x / scaleMedium, z / scaleMedium) * intensityMedium);
+			for (int y = stoneLayer; y < dirtLayer; y++) {
 				auto block = GetCube(x, y, z);
 				*block = DIRT;
 			}
-			auto block = GetCube(x, 5, z);
+
+			auto block = GetCube(x, dirtLayer, z);
 			*block = GRASS;
 		}
 	}

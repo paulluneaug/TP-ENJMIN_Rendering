@@ -1,10 +1,10 @@
 #pragma once
 
+#include "Engine/Camera.h"
 #include "Minicraft/Block.h"
-#include "Minicraft/Camera.h"
 #include "Minicraft/Chunk.h"
 
-#define WORLD_SIZE 5
+#define WORLD_SIZE 15
 #define WORLD_HEIGHT 3
 
 class Chunk;

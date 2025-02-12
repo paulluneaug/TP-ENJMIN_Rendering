@@ -1,6 +1,9 @@
 #include "pch.h"
 
 #include "Player.h"
+#include "Utils.h"
+
+using ButtonState = Mouse::ButtonStateTracker::ButtonState;
 
 Vector3 collisionPoints[] = {
 	{ 0.3f,     0,     0},
@@ -16,6 +19,9 @@ Vector3 collisionPoints[] = {
 };
 
 void Player::Update(float dt, DirectX::Keyboard::State kb, DirectX::Mouse::State ms) {
+	keyboardTracker.Update(kb);
+	mouseTracker.Update(ms);
+
 	Vector3 delta;
 	if (kb.Z) delta += Vector3::Forward;
 	if (kb.S) delta += Vector3::Backward;
@@ -57,41 +63,21 @@ void Player::Update(float dt, DirectX::Keyboard::State kb, DirectX::Mouse::State
 
 	camera.SetRotation(camRot);
 	camera.SetPosition(position + Vector3(0, 1.25f, 0));
-	// todo
-	/*
-	float camSpeedRot = 0.25f;
-	float camSpeedMouse = 10.0f;
-	float camSpeed = 15.0f;
-	if (kb.LeftShift) camSpeed *= 2.0f;
 
-	Mouse::State mstate = mouse->GetState();
-	const Matrix viewInverse = view.Invert();
+	if (mouseTracker.leftButton == ButtonState::PRESSED || mouseTracker.rightButton == ButtonState::PRESSED) {
+		auto cubes = Raycast(camera.GetPosition() + Vector3(0.5, 0.5, 0.5), camera.Forward(), 5);
+		for (int i = 0; i < cubes.size(); i++) {
+			auto block = world->GetCube(cubes[i][0], cubes[i][1], cubes[i][2]);
+			if (!block) continue;
+			if (*block == EMPTY) continue;
 
-	Vector3 delta;
-	if (kb.Z) delta += Vector3::Forward;
-	if (kb.S) delta += Vector3::Backward;
-	if (kb.Q) delta += Vector3::Left;
-	if (kb.D) delta += Vector3::Right;
-	camPos += Vector3::TransformNormal(delta, viewInverse) * camSpeed * dt;
+			if (mouseTracker.leftButton == ButtonState::PRESSED) {
+				world->UpdateBlock(cubes[i][0], cubes[i][1], cubes[i][2], EMPTY);
+			} else if(i > 0) {
+				world->UpdateBlock(cubes[i - 1][0], cubes[i - 1][1], cubes[i - 1][2], WOOD);
+			}
+			break;
+		}
+	}
 
-    if (mstate.positionMode == Mouse::MODE_RELATIVE) {
-		float dx = mstate.x;
-		float dy = mstate.y;
-        if (mstate.rightButton) {
-			Vector3 deltaMouse;
-			if(kb.LeftShift || kb.RightShift)
-				deltaMouse = Vector3(0, 0, dy);
-			else
-				deltaMouse = Vector3(-dx, dy, 0);
-			camPos += Vector3::TransformNormal(deltaMouse, viewInverse) * camSpeed * dt;
-			// TP Translate camera a partir de dx/dy
-        } else if (mstate.leftButton) {
-			camRot *= Quaternion::CreateFromAxisAngle(Vector3::TransformNormal(Vector3::Right, viewInverse), -dy * dt * camSpeedRot);
-			camRot *= Quaternion::CreateFromAxisAngle(Vector3::Up, -dx * dt * camSpeedRot);
-        } else {
-            mouse->SetMode(Mouse::MODE_ABSOLUTE);
-        }
-    } else if (mstate.rightButton || mstate.leftButton) {
-        mouse->SetMode(Mouse::MODE_RELATIVE);
-    }*/
 }
