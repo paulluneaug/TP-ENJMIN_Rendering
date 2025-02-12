@@ -5,6 +5,7 @@
 	F( STONE,				1 ) \
 	F( DIRT,				2 ) \
 	F( GRASS,				3, 0, 2 ) \
+	F( SNOWY_GRASS,			68, 66, 2 ) \
 	F( WOOD,				4 ) \
 	F( SLAB,				5, 6, 6 ) \
 	F( BRICK,				7 ) \

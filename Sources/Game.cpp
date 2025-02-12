@@ -143,7 +143,7 @@ void Game::Render() {
 
 	m_texture.Apply(m_deviceResources.get());
 
-	m_world.Draw(m_deviceResources.get());
+	m_world.Draw(m_camera, m_deviceResources.get());
 
 
 	// envoie nos commandes au GPU pour etre afficher � l'�cran

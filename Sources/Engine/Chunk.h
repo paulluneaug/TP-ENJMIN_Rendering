@@ -66,5 +66,8 @@ private:
 	bool ShouldDisplayFace(int x, int y, int z, int ox, int oy, int oz);
 
 	const BlockId& GetBlockAtPosition(int x, int y, int z);
+
+	BlockId GetStoneBlock(GenerationSettings& generationSettings, int worldX, int worldY, int worldZ);
+	BlockId GetGrassBlock(GenerationSettings& generationSettings, int worldX, int worldY, int worldZ);
 };
 

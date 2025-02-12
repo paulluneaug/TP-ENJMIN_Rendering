@@ -95,14 +95,16 @@ void Chunk::GenerateBlocksValues(GenerationSettings& generationSettings)
 			float stoneNoiseValue = generationSettings.StoneNoiseGenerator->Sample2DNoiseAtPosition(worldX, worldZ);
 			float dirtNoiseValue = generationSettings.DirtNoiseGenerator->Sample2DNoiseAtPosition(worldX, worldZ);
 
-			int stoneEndHeight = Lerp(generationSettings.StoneWidthRange, stoneNoiseValue);
-			int dirtEndHeight = stoneEndHeight + Lerp(generationSettings.DirtWidthRange, dirtNoiseValue);
+			int stoneEndHeight = Utils::Lerp(generationSettings.StoneWidthRange, stoneNoiseValue);
+			int dirtEndHeight = stoneEndHeight + Utils::Lerp(generationSettings.DirtWidthRange, dirtNoiseValue);
 
 			for (int y = 0; y < CHUNK_SIZE; ++y)
 			{
 				int worldY = m_chunkPostion.Y * CHUNK_SIZE + y;
 
 				float caveNoiseValue = generationSettings.CaveNoiseGenerator->Sample3DNoiseAtPosition(worldX, worldY, worldZ);
+				bool inCave = caveNoiseValue > generationSettings.CaveThreshold;
+
 
 				BlockId block;
 
@@ -110,26 +112,27 @@ void Chunk::GenerateBlocksValues(GenerationSettings& generationSettings)
 				{
 					block = BEDROCK;
 				}
-				else if (caveNoiseValue > generationSettings.CaveThreshold)
-				{
-					block = EMPTY;
-				}
 				else if (worldY < stoneEndHeight)
 				{
-					block = STONE;
+					block = inCave ? EMPTY : GetStoneBlock(generationSettings, worldX, worldY, worldZ);
 				}
-				else if (worldY < dirtEndHeight)
+				else if (worldY < dirtEndHeight && !inCave)
 				{
-					block = DIRT;
+					block = inCave ? EMPTY : DIRT;
+				}
+				else if (worldY < generationSettings.WaterHeight)
+				{
+					block = WATER;
 				}
 				else if (worldY < dirtEndHeight + 1)
 				{
-					block = GRASS;
+					block = inCave ? EMPTY : GetGrassBlock(generationSettings, worldX, worldY, worldZ);
 				}
 				else
 				{
 					block = EMPTY;
 				}
+
 				m_blocks[CoordinatesToIndex(x, y, z)] = block;
 			}
 		}
@@ -254,4 +257,49 @@ const BlockId& Chunk::GetBlockAtPosition(int x, int y, int z)
 	}
 
 	return m_blocks[CoordinatesToIndex(x, y, z)];
+}
+
+BlockId Chunk::GetStoneBlock(GenerationSettings& generationSettings, int worldX, int worldY, int worldZ)
+{
+	if (generationSettings.CoalGenerator.ShouldGenerateOre(worldX, worldY, worldZ))
+	{
+		return COAL;
+	}
+	if (generationSettings.IronGenerator.ShouldGenerateOre(worldX, worldY, worldZ))
+	{
+		return IRON_ORE;
+	}
+	if (generationSettings.GoldGenerator.ShouldGenerateOre(worldX, worldY, worldZ))
+	{
+		return GOLD_ORE;
+	}
+	if (generationSettings.DiamondGenerator.ShouldGenerateOre(worldX, worldY, worldZ))
+	{
+		return DIAMOND_ORE;
+	}
+	if (generationSettings.RedstoneGenerator.ShouldGenerateOre(worldX, worldY, worldZ))
+	{
+		return REDSTONE_ORE;
+	}
+	float undergroundDirtNoiseValue = generationSettings.UndergroundDirtNoiseGenerator->Sample3DNoiseAtPosition(worldX, worldY, worldZ);
+	if (undergroundDirtNoiseValue > generationSettings.UndergroundDirtThreshold)
+	{
+		return DIRT;
+	}
+
+	float undergroundGravelNoiseValue = generationSettings.UndergroundGravelNoiseGenerator->Sample3DNoiseAtPosition(worldX, worldY, worldZ);
+	if (undergroundGravelNoiseValue > generationSettings.UndergroundGravelThreshold)
+	{
+		return GRAVEL;
+	}
+	return STONE;
+}
+
+BlockId Chunk::GetGrassBlock(GenerationSettings& generationSettings, int worldX, int worldY, int worldZ)
+{
+	int snowHeight = std::clamp(worldY, generationSettings.SnowHeightRange.X, generationSettings.SnowHeightRange.Y);
+	float snowWeight = Utils::InverseLerp(snowHeight, generationSettings.SnowHeightRange);
+
+	bool isSnowy = generationSettings.SnowNoiseGenerator->Sample2DNoiseAtPosition(worldX, worldZ) * snowWeight > generationSettings.SnowThreshold;
+	return isSnowy ? SNOWY_GRASS : GRASS;
 }

@@ -15,18 +15,15 @@ public:
 		int Scale;
 		int GradientOffset;
 
-		float Offset;
-
 		bool UseSmootherStep;
 		bool Inverse;
 
 		bool SameCellSameValue;
 
-		NoiseLayer(float layerWeight, int scale, int gradientOffset = 0, float offset = 0, bool useSmootherStep = false, bool inverse = false, bool sameCellSameValue = false) :
+		NoiseLayer(float layerWeight, int scale, int gradientOffset = 0,  bool useSmootherStep = false, bool inverse = false, bool sameCellSameValue = false) :
 			LayerWeight(layerWeight),
 			Scale(scale),
 			GradientOffset(gradientOffset),
-			Offset(offset),
 			UseSmootherStep(useSmootherStep),
 			Inverse(inverse),
 			SameCellSameValue(sameCellSameValue)
