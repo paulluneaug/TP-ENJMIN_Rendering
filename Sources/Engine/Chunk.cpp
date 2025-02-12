@@ -1,8 +1,6 @@
 #include "pch.h"
 #include "Chunk.h"
-#include <SimpleMath.h>
-
-using namespace DirectX::SimpleMath;
+#include "Utils.h"
 
 Chunk::Chunk(Vector3Int position):
 	m_chunkPostion(position)
@@ -13,6 +11,20 @@ Chunk::Chunk(Vector3Int position):
 	{
 		m_neighbouringChunks[i] = nullptr;
 	}
+
+	m_bounds = BoundingBox
+	{
+		{
+			float(position.X * CHUNK_SIZE + CHUNK_SIZE / 2 - 0.5f),
+			float(position.Y * CHUNK_SIZE + CHUNK_SIZE / 2 - 0.5f),
+			float(position.Z * CHUNK_SIZE + CHUNK_SIZE / 2 - 0.5f)
+		},
+		{
+			float(CHUNK_SIZE / 2),
+			float(CHUNK_SIZE / 2),
+			float(CHUNK_SIZE / 2)
+		} 
+	};
 }
 
 void Chunk::Generate(DeviceResources* deviceRes, GenerationSettings& generationSettings)
@@ -44,10 +56,10 @@ void Chunk::PushFace(const Vector3& position, const Vector3& up, const Vector3& 
 	float xOffset = (float(uvID % blocksPerRow)) / blocksPerRow;
 	float yOffset = (float(uvID / blocksPerRow)) / blocksPerRow;
 
-	uint32_t a = m_vertexBuffer.PushVertex({ ToVec4(position),				{xOffset, yOffset + blockSize} });
-	uint32_t b = m_vertexBuffer.PushVertex({ ToVec4(position + right),		{xOffset + blockSize, yOffset + blockSize} });
-	uint32_t c = m_vertexBuffer.PushVertex({ ToVec4(position + up),			{xOffset, yOffset} });
-	uint32_t d = m_vertexBuffer.PushVertex({ ToVec4(position + up + right), {xOffset + blockSize, yOffset} });
+	uint32_t a = m_vertexBuffer.PushVertex({ Utils::ToVec4(position),				{xOffset, yOffset + blockSize} });
+	uint32_t b = m_vertexBuffer.PushVertex({ Utils::ToVec4(position + right),		{xOffset + blockSize, yOffset + blockSize} });
+	uint32_t c = m_vertexBuffer.PushVertex({ Utils::ToVec4(position + up),			{xOffset, yOffset} });
+	uint32_t d = m_vertexBuffer.PushVertex({ Utils::ToVec4(position + up + right),	{xOffset + blockSize, yOffset} });
 
 	m_indexBuffer.PushTriangle(a, c, b);
 	m_indexBuffer.PushTriangle(b, c, d);
@@ -55,6 +67,11 @@ void Chunk::PushFace(const Vector3& position, const Vector3& up, const Vector3& 
 
 void Chunk::Draw(DeviceResources* deviceRes)
 {
+	if (m_indexBuffer.Size() == 0) 
+	{
+		return;
+	}
+
 	m_vertexBuffer.Apply(deviceRes, 0);
 	m_indexBuffer.Apply(deviceRes);
 
@@ -64,26 +81,6 @@ void Chunk::Draw(DeviceResources* deviceRes)
 void Chunk::SetNeighbouringChunk(Chunk* chunk, NeighbouringChunkIndex chunkRelativePosition)
 {
 	m_neighbouringChunks[chunkRelativePosition] = chunk;
-}
-
-inline Vector4 Chunk::ToVec4(Vector3 v3)
-{
-	return Vector4(v3.x, v3.y, v3.z, 1.0f);
-}
-
-inline float Chunk::Lerp(float a, float b, float t)
-{
-	return a + (b - a) * t;
-}
-
-inline int Chunk::Lerp(int a, int b, float t)
-{
-	return a + (b - a) * t;
-}
-
-inline int Chunk::Lerp(Vector2Int range, float t)
-{
-	return Lerp(range.X, range.Y, t);
 }
 
 void Chunk::GenerateBlocksValues(GenerationSettings& generationSettings)
@@ -159,6 +156,11 @@ void Chunk::GenerateMesh(DeviceResources* deviceRes)
 
 	m_vertexBuffer.Create(deviceRes);
 	m_indexBuffer.Create(deviceRes);
+}
+
+const BoundingBox& Chunk::GetBounds()
+{
+	return m_bounds;
 }
 
 inline Vector3Int Chunk::IndexToCoordinates(int index)

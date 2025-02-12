@@ -23,11 +23,17 @@ void World::Generate(DeviceResources* deviceRes)
 	GenerateChunksMeshes(deviceRes);
 }
 
-void World::Draw(DeviceResources* deviceRes)
+void World::Draw(Camera& camera, DeviceResources* deviceRes)
 {
+	BoundingFrustum frustrum = camera.GetFrustrum();
 	for (std::pair<Vector3Int, Chunk*> pair : m_chunks)
 	{
 		Chunk* chunk = pair.second;
+		if (!frustrum.Intersects(chunk->GetBounds())) 
+		{
+			continue;
+		}
+
 
 		m_constantBufferModel.Data.Model = chunk->ModelMatrix.Transpose();
 		m_constantBufferModel.UpdateBuffer(deviceRes);

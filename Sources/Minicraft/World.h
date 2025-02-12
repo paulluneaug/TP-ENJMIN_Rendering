@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <Engine/Vector3Int.h>
 #include <Engine/Chunk.h>
+#include "Camera.h"
 
 class World
 {
@@ -23,7 +24,7 @@ public:
 	World();
 	~World();
 	void Generate(DeviceResources* deviceRes);
-	void Draw(DeviceResources* deviceRes);
+	void Draw(Camera& camera, DeviceResources* deviceRes);
 
 private:
 	Chunk* CreateChunkAtPosition(const Vector3Int& position);

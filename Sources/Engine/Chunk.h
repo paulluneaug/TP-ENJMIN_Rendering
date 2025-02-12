@@ -7,6 +7,8 @@
 
 using VertexLayout = VertexLayout_PositionUV;
 
+using namespace DirectX;
+
 class Chunk
 {
 public:
@@ -35,6 +37,8 @@ private :
 
 	Vector3Int m_chunkPostion;
 
+	BoundingBox m_bounds;
+
 public:
 
 	Chunk(Vector3Int position);
@@ -47,10 +51,7 @@ public:
 	void GenerateBlocksValues(GenerationSettings& generationSettings);
 	void GenerateMesh(DeviceResources* deviceRes);
 
-	inline static Vector4 ToVec4(Vector3 v3);
-	inline static float Lerp(float a, float b, float t);
-	inline static int Lerp(int a, int b, float t);
-	inline static int Lerp(Vector2Int range, float t);
+	const BoundingBox& GetBounds();
 
 private:
 

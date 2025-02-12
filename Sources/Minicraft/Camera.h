@@ -23,6 +23,9 @@ private:
 		Matrix ProjectionMatrix;
 	};
 	ConstantBuffer<MatrixData>* m_cameraConstantBuffer = nullptr;
+
+	BoundingFrustum m_frustrum;
+
 public:
 	Camera(float fov, float aspectRatio);
 	~Camera();
@@ -31,4 +34,6 @@ public:
 	void Update(float dt, DirectX::Keyboard::State kb, DirectX::Mouse* ms);
 
 	void ApplyCamera(DeviceResources* deviceRes);
+
+	const BoundingFrustum& GetFrustrum();
 };

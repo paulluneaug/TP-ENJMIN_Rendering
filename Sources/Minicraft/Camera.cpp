@@ -76,8 +76,11 @@ void Camera::Update(float dt, Keyboard::State kb, Mouse* mouse) {
 	Vector3 newForward = Vector3::Transform(Vector3::Forward, m_camRotation);
 	Vector3 newUp = Vector3::Transform(Vector3::Up, m_camRotation);
 
-	// TP updater matrice view
 	m_view = Matrix::CreateLookAt(m_camPosition, m_camPosition + newForward, newUp);
+
+	BoundingFrustum::CreateFromMatrix(m_frustrum, m_projection, true);
+
+	m_frustrum.Transform(m_frustrum, m_view.Invert());
 }
 
 void Camera::ApplyCamera(DeviceResources* deviceRes) {
@@ -94,4 +97,9 @@ void Camera::ApplyCamera(DeviceResources* deviceRes) {
 	m_cameraConstantBuffer->ApplyToVS(deviceRes, 1);
 
 	// TP envoyer data
+}
+
+const BoundingFrustum& Camera::GetFrustrum()
+{
+	return m_frustrum;
 }
