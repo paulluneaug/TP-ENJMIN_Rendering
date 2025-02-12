@@ -40,10 +40,10 @@ void World::Generate(DeviceResources* deviceRes) {
 		for (int z = 0; z < CHUNK_SIZE * WORLD_SIZE; z++) {
 			// perlin.noise2D_01(x, z);
 			for (int y = 0; y < 5; y++) {
-				auto block = GetCubes(x, y, z);
+				auto block = GetCube(x, y, z);
 				*block = DIRT;
 			}
-			auto block = GetCubes(x, 5, z);
+			auto block = GetCube(x, 5, z);
 			*block = GRASS;
 		}
 	}
@@ -66,6 +66,8 @@ void World::Draw(Camera* camera, DeviceResources* deviceRes) {
 			chunks[idx]->Draw(deviceRes);
 		}
 	}
+	constantBufferModel.data.model = Matrix::Identity;
+	constantBufferModel.UpdateBuffer(deviceRes);
 }
 
 Chunk* World::GetChunk(int cx, int cy, int cz) {
@@ -74,7 +76,7 @@ Chunk* World::GetChunk(int cx, int cy, int cz) {
 	return chunks[cx + cy * WORLD_SIZE + cz * WORLD_SIZE * WORLD_HEIGHT];
 }
 
-BlockId* World::GetCubes(int gx, int gy, int gz) {
+BlockId* World::GetCube(int gx, int gy, int gz) {
 	int cx = gx / CHUNK_SIZE;
 	int cy = gy / CHUNK_SIZE;
 	int cz = gz / CHUNK_SIZE;
@@ -88,7 +90,7 @@ BlockId* World::GetCubes(int gx, int gy, int gz) {
 }
 
 void World::MakeChunkDirty(int gx, int gy, int gz) {
-	auto chunk = GetChunkFromCoordinates(gx + 1, gy, gz);
+	auto chunk = GetChunkFromCoordinates(gx, gy, gz);
 	if (chunk) chunk->needRegen = true;
 }
 
@@ -100,7 +102,7 @@ Chunk* World::GetChunkFromCoordinates(int gx, int gy, int gz) {
 }
 
 void World::UpdateBlock(int gx, int gy, int gz, BlockId block) {
-	auto cube = GetCubes(gx, gy, gz);
+	auto cube = GetCube(gx, gy, gz);
 	if (!cube) return;
 	*cube = block;
 

@@ -61,9 +61,12 @@ bool Chunk::ShouldRenderFace(int lx, int ly, int lz, int dx, int dy, int dz) {
 }
 
 void Chunk::Generate(DeviceResources* deviceRes) {
+	vb.Clear();
+	ib.Clear();
+
 	for (int x = 0; x < CHUNK_SIZE; x++) {
 		for (int z = 0; z < CHUNK_SIZE; z++) {
-			for (int y = 0; y < CHUNK_SIZE / 2; y++) {
+			for (int y = 0; y < CHUNK_SIZE; y++) {
 				auto block = GetCubeLocal(x, y, z);
 				if (EMPTY == *block) continue;
 				PushCube(x, y, z);
@@ -71,10 +74,8 @@ void Chunk::Generate(DeviceResources* deviceRes) {
 		}
 	}
 
-	if (vb.Size() != 0)
-		vb.Create(deviceRes);
-	if (ib.Size() != 0)
-		ib.Create(deviceRes);
+	vb.Create(deviceRes);
+	ib.Create(deviceRes);
 	needRegen = false;
 }
 

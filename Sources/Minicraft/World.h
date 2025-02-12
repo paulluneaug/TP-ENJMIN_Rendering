@@ -23,7 +23,7 @@ public:
 
 	Chunk* GetChunk(int cx, int cy, int cz);
 	Chunk* GetChunkFromCoordinates(int gx, int gy, int gz);
-	BlockId* GetCubes(int gx, int gy, int gz);
+	BlockId* GetCube(int gx, int gy, int gz);
 	void MakeChunkDirty(int gx, int gy, int gz);
 
 	void UpdateBlock(int gx, int gy, int gz, BlockId block);
